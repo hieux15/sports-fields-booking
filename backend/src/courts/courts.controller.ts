@@ -40,6 +40,14 @@ export class CourtsController {
     return this.courtsService.findAll();
   }
 
+  // Phải khai báo trước @Get(':id') để "me" không bị hiểu là id sân
+  @Get('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.OWNER)
+  findMine(@Req() req: AuthenticatedRequest) {
+    return this.courtsService.findMyCourts(req.user.id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.courtsService.findOne(id);

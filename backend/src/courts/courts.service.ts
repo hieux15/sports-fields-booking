@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +27,14 @@ export class CourtsService {
 
   async findAll() {
     return this.prisma.court.findMany();
+  }
+
+  // Lấy danh sách sân của chính chủ sân đang đăng nhập
+  async findMyCourts(userId: string) {
+    return this.prisma.court.findMany({
+      where: { ownerId: userId },
+      orderBy: { name: 'asc' },
+    });
   }
 
   async findOne(courtId: string) {
@@ -78,6 +90,33 @@ export class CourtsService {
         'Sân thể thao không tồn tại hoặc bạn không có quyền xóa sân này',
       );
     }
+
+    // Chỉ cho xóa khi sân không còn đơn đặt sân đang chờ/đã xác nhận
+    const activeBookings = await this.prisma.booking.count({
+      where: {
+        courtId: courtId,
+        status: {
+          not: 'CANCELLED',
+        },
+      },
+    });
+
+    if (activeBookings > 0) {
+      throw new BadRequestException(
+        `Không thể xóa sân "${court.name}" vì vẫn còn ${activeBookings} đơn đặt sân chưa hủy`,
+      );
+    }
+
+    // Xóa kèm các đơn đã hủy để không vi phạm khóa ngoại Booking.courtId
+    await this.prisma.$transaction(async (tx) => {
+      await tx.booking.deleteMany({
+        where: {
+          courtId: courtId,
+          status: 'CANCELLED',
+        },
+      });
+      await tx.court.delete({ where: { id: courtId } });
+    });
 
     return {
       success: true,

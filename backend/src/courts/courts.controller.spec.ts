@@ -16,6 +16,7 @@ describe('CourtsController', () => {
   const courtsService = {
     create: jest.fn(),
     findAll: jest.fn(),
+    findMyCourts: jest.fn(),
     findOne: jest.fn(),
     updateMyCourt: jest.fn(),
     removeMyCourt: jest.fn(),
@@ -60,6 +61,12 @@ describe('CourtsController', () => {
     await controller.findOne('court-1');
 
     expect(courtsService.findOne).toHaveBeenCalledWith('court-1');
+  });
+
+  it('ủy quyền lấy sân của tôi cho service với id chủ sân', async () => {
+    await controller.findMine(buildRequest('owner-1'));
+
+    expect(courtsService.findMyCourts).toHaveBeenCalledWith('owner-1');
   });
 
   it('ủy quyền cập nhật sân cho service với id sân và id chủ sân', async () => {

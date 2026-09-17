@@ -61,15 +61,17 @@ All routes are served without an `/api` prefix. Protected routes expect
 | `GET` | `/users/me` | authenticated | Current user profile |
 | `PATCH` | `/users/me` | authenticated | Update `name` / `phone` |
 | `GET` | `/courts` | public | All courts (no owner, filters or pagination) |
+| `GET` | `/courts/me` | `OWNER` | Your own courts, sorted by `name` |
 | `GET` | `/courts/:id` | public | Court detail including owner name and phone |
 | `POST` | `/courts` | `OWNER` | Create a court |
 | `PATCH` | `/courts/:id` | `OWNER` | Update one of your courts |
-| `DELETE` | `/courts/:id` | `OWNER` | Delete one of your courts |
+| `DELETE` | `/courts/:id` | `OWNER` | Delete one of your courts (see the note below) |
 | `GET` | `/courts/:id/bookings` | `OWNER` | Bookings of one of your courts |
 | `POST` | `/bookings` | `CUSTOMER` | Create a booking |
 | `GET` | `/bookings/me` | `CUSTOMER` | Your bookings, each with its court |
 | `GET` | `/bookings/:id` | `CUSTOMER` | One of your bookings |
 | `PATCH` | `/bookings/:id/cancel` | `CUSTOMER` / `OWNER` | Cancel a booking |
+| `PATCH` | `/bookings/:id/confirm` | `OWNER` | Confirm a booking made on one of your courts |
 
 Notes for API consumers:
 
@@ -79,6 +81,12 @@ Notes for API consumers:
   so request bodies must contain only the documented fields.
 - Errors use the standard Nest shape `{ statusCode, message, error }` where
   `message` can be a `string` or a `string[]`.
+- `GET /courts/me` is declared before `GET /courts/:id`, so the literal path
+  `me` is never swallowed by the `:id` parameter.
+- `DELETE /courts/:id` answers `400` while the court still has bookings whose
+  `status` is not `CANCELLED` (`message` reports how many are left). When it
+  succeeds it first deletes the `CANCELLED` bookings of that court in the same
+  transaction, which keeps the `Booking.courtId` foreign key valid.
 
 ## Frontend
 
