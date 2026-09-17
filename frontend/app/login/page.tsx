@@ -1,0 +1,13 @@
+'use client'
+import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowRight, Trophy } from 'lucide-react'
+import { useAuth } from '@/components/auth-provider'
+import { getErrorMessage } from '@/lib/api-error'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+export default function LoginPage() { const { login } = useAuth(); const router = useRouter(); const [email, setEmail] = useState('customer@test.com'); const [password, setPassword] = useState('123456'); const [loading, setLoading] = useState(false); const submit = async (e: React.FormEvent) => { e.preventDefault(); setLoading(true); try { const user = await login(email, password); toast.success('Đăng nhập thành công'); router.push(user.role === 'OWNER' ? '/owner' : '/courts') } catch (e) { toast.error(getErrorMessage(e)) } finally { setLoading(false) } }; return <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10"><Card className="w-full max-w-md shadow-lg"><CardHeader className="text-center"><div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><Trophy /></div><CardTitle className="text-2xl">Chào mừng trở lại</CardTitle><CardDescription>Đăng nhập để tiếp tục đặt sân</CardDescription></CardHeader><CardContent><form onSubmit={submit} className="flex flex-col gap-5"><div className="flex flex-col gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required /></div><div className="flex flex-col gap-2"><Label htmlFor="password">Mật khẩu</Label><Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required /></div><Button disabled={loading} className="h-11">{loading ? 'Đang đăng nhập...' : 'Đăng nhập'} <ArrowRight data-icon="inline-end" /></Button><div className="flex gap-2 text-xs"><Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setEmail('customer@test.com'); setPassword('123456') }}>Điền nhanh khách</Button><Button type="button" variant="outline" size="sm" className="flex-1" onClick={() => { setEmail('owner@test.com'); setPassword('123456') }}>Điền nhanh chủ sân</Button></div><p className="text-center text-sm text-muted-foreground">Chưa có tài khoản? <Link href="/register" className="font-semibold text-primary hover:underline">Đăng ký ngay</Link></p></form></CardContent></Card></div> }

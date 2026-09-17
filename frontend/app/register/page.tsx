@@ -1,0 +1,12 @@
+'use client'
+import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/components/auth-provider'
+import { getErrorMessage } from '@/lib/api-error'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+export default function RegisterPage() { const { register } = useAuth(); const router = useRouter(); const [form, setForm] = useState({ name: '', email: '', password: '' }); const [loading, setLoading] = useState(false); const submit = async (e: React.FormEvent) => { e.preventDefault(); if (form.password.length < 6) return toast.error('Mật khẩu cần ít nhất 6 ký tự'); setLoading(true); try { const user = await register(form); toast.success('Tạo tài khoản thành công'); router.push(user.role === 'OWNER' ? '/owner' : '/courts') } catch (e) { toast.error(getErrorMessage(e)) } finally { setLoading(false) } }; return <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10"><Card className="w-full max-w-md"><CardHeader><CardTitle className="text-2xl">Tạo tài khoản</CardTitle><CardDescription>Tham gia cộng đồng thể thao Sân Việt</CardDescription></CardHeader><CardContent><form onSubmit={submit} className="flex flex-col gap-5"><div className="flex flex-col gap-2"><Label htmlFor="name">Họ và tên</Label><Input id="name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div><div className="flex flex-col gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div><div className="flex flex-col gap-2"><Label htmlFor="password">Mật khẩu</Label><Input id="password" type="password" minLength={6} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required /></div><Button disabled={loading}>{loading ? 'Đang tạo tài khoản...' : 'Đăng ký'}</Button><p className="text-center text-sm text-muted-foreground">Đã có tài khoản? <Link href="/login" className="font-semibold text-primary hover:underline">Đăng nhập</Link></p></form></CardContent></Card></div> }
