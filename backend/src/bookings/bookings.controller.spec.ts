@@ -62,10 +62,7 @@ describe('BookingsController', () => {
 
     await controller.findOne(buildRequest('user-1'), 'booking-1');
 
-    expect(bookingsService.findOne).toHaveBeenCalledWith(
-      'booking-1',
-      'user-1',
-    );
+    expect(bookingsService.findOne).toHaveBeenCalledWith('booking-1', 'user-1');
   });
 
   it('ủy quyền hủy booking cho service với id booking và id người dùng', async () => {
@@ -80,10 +77,12 @@ describe('BookingsController', () => {
   });
 
   it('cho phép cả CUSTOMER và OWNER gọi route hủy booking', () => {
-    const roles = Reflect.getMetadata(
-      ROLES_KEY,
-      BookingsController.prototype.cancel,
-    ) as Role[];
+    // Đọc hàm qua property descriptor để tránh tham chiếu method không bind.
+    const cancelHandler = Object.getOwnPropertyDescriptor(
+      BookingsController.prototype,
+      'cancel',
+    )?.value as object;
+    const roles = Reflect.getMetadata(ROLES_KEY, cancelHandler) as Role[];
 
     expect(roles).toEqual([Role.CUSTOMER, Role.OWNER]);
   });
