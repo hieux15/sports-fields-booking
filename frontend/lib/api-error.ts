@@ -22,6 +22,15 @@ export function normalizeApiError(body: unknown, status: number): ApiError {
   return new ApiError(getErrorMessage(body), status)
 }
 
+export function isUnavailable(error: unknown): boolean {
+  if (error instanceof ApiError) return error.status >= 500
+  return error instanceof TypeError
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 401
+}
+
 export function isMockMode() {
   return process.env.NEXT_PUBLIC_USE_MOCK === '1'
 }
