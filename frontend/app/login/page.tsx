@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
+import { isMockMode } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
 import { AuthBrandPanel } from '@/components/auth-brand-panel'
 import { Button } from '@/components/ui/button'
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -78,7 +80,7 @@ export default function LoginPage() {
             <Input
               id="password"
               className="h-11"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Ít nhất 6 ký tự"
               value={password}
@@ -86,6 +88,14 @@ export default function LoginPage() {
               required
               minLength={6}
             />
+            <button
+              type="button"
+              className="self-end text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setShowPassword(value => !value)}
+            >
+              {showPassword ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
+              {showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            </button>
           </div>
 
           {error && (
@@ -107,7 +117,7 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <div className="border-t border-border/80 pt-4">
+        {isMockMode() && <div className="border-t border-border/80 pt-4">
           <p className="text-xs text-muted-foreground">Tài khoản demo — mật khẩu 123456</p>
           <div className="mt-2 flex flex-col gap-1">
             {DEMO_ACCOUNTS.map(account => (
@@ -125,7 +135,7 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   )

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
 import { AuthBrandPanel } from '@/components/auth-brand-panel'
@@ -18,6 +18,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -95,7 +97,7 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 className="h-11"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Tối thiểu 6 ký tự"
                 value={password}
@@ -103,13 +105,21 @@ export default function RegisterPage() {
                 required
                 minLength={6}
               />
+              <button
+                type="button"
+                className="self-end text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword(value => !value)}
+              >
+                {showPassword ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
+                {showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              </button>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="confirm">Nhập lại mật khẩu</Label>
               <Input
                 id="confirm"
                 className="h-11"
-                type="password"
+                type={showConfirm ? 'text' : 'password'}
                 autoComplete="new-password"
                 placeholder="Nhập lại mật khẩu"
                 value={confirm}
@@ -117,6 +127,14 @@ export default function RegisterPage() {
                 required
                 minLength={6}
               />
+              <button
+                type="button"
+                className="self-end text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowConfirm(value => !value)}
+              >
+                {showConfirm ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
+                {showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              </button>
             </div>
           </div>
 
