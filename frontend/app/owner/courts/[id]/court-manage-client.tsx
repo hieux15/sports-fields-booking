@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ArrowLeft,
   Ban,
-  CalendarDays,
   CheckCircle2,
   Clock3,
   Mail,
@@ -14,30 +13,20 @@ import {
   Phone,
   RefreshCw,
   Store,
-  TrendingUp,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
+import { bookingTotal } from '@/lib/booking-utils'
 import { courtTypeMeta } from '@/lib/court-type'
 import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
-import type { BookingStatus, CourtDetail, OwnerBooking } from '@/lib/types'
+import type { CourtDetail, OwnerBooking } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-
-const COLUMNS: { status: BookingStatus; title: string }[] = [
-  { status: 'PENDING', title: 'Chờ xác nhận' },
-  { status: 'CONFIRMED', title: 'Đã xác nhận' },
-  { status: 'CANCELLED', title: 'Đã hủy' },
-]
-
-function bookingTotal(booking: OwnerBooking) {
-  return hoursBetween(booking.startTime, booking.endTime) * Number(booking.court.pricePerHour)
-}
 
 export default function CourtManageClient({ id }: { id: string }) {
   const { user, loading: authLoading } = useAuth()
@@ -218,35 +207,31 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
           </Button>
         </div>
       </div>
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Tổng đơn"
-          value={String(stats.total)}
-          icon={<CalendarDays className="size-5" />}
-          tone="primary"
-        />
-        <StatCard
-          label="Chờ xác nhận"
-          value={String(stats.pending)}
-          icon={<Clock3 className="size-5" />}
-          tone="amber"
-        />
-        <StatCard
-          label="Đã xác nhận"
-          value={String(stats.confirmed)}
-          icon={<CheckCircle2 className="size-5" />}
-          tone="emerald"
-        />
-        <StatCard
-          label="Doanh thu đã xác nhận"
-          value={formatVND(stats.revenue)}
-          icon={<TrendingUp className="size-5" />}
-          tone="primary"
-        />
+      <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-border py-3 text-sm">
+        <span>
+          <strong className="text-foreground">{stats.total}</strong>{' '}
+          <span className="text-muted-foreground">tổng đơn</span>
+        </span>
+        <span>
+          <strong className="text-amber-700">{stats.pending}</strong>{' '}
+          <span className="text-muted-foreground">chờ xác nhận</span>
+        </span>
+        <span>
+          <strong className="text-emerald-700">{stats.confirmed}</strong>{' '}
+          <span className="text-muted-foreground">đã xác nhận</span>
+        </span>
+        <span className="text-muted-foreground">
+          Doanh thu đã xác nhận: <strong className="text-foreground">{formatVND(stats.revenue)}</strong>
+        </span>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-bold">Đơn đặt sân</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Đơn đặt sân</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {upcomingOnly ? 'Đang hiển thị các đơn chưa kết thúc.' : 'Xếp theo thời gian bắt đầu.'}
+          </p>
+        </div>
         <Button
           variant={upcomingOnly ? 'default' : 'outline'}
           size="sm"
@@ -256,47 +241,26 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {COLUMNS.map(column => {
-          const items = visible.filter(item => item.status === column.status)
-          const columnMeta = bookingStatusMeta(column.status)
-          return (
-            <div
-              key={column.status}
-              className={`flex flex-col gap-3 rounded-2xl border p-4 ${columnMeta.column}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`size-2 rounded-full ${columnMeta.dot}`} />
-                  <p className="font-semibold">{column.title}</p>
-                </div>
-                <Badge variant="outline" className={columnMeta.className}>
-                  {items.length}
-                </Badge>
-              </div>
-
-              {items.length === 0 ? (
-                <p className="rounded-xl border border-dashed bg-background/60 px-3 py-6 text-center text-sm text-muted-foreground">
-                  Chưa có đơn nào
-                </p>
-              ) : (
-                items.map(item => (
-                  <BookingCard
-                    key={item.id}
-                    booking={item}
-                    pendingAction={pendingAction}
-                    onAction={updateStatus}
-                  />
-                ))
-              )}
-            </div>
-          )
-        })}
+      <div className="border-y border-border">
+        {visible.length === 0 ? (
+          <p className="border-b border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+            {upcomingOnly ? 'Không có đơn sắp tới.' : 'Chưa có đơn đặt sân nào.'}
+          </p>
+        ) : (
+          visible.map(booking => (
+            <BookingRow
+              key={booking.id}
+              booking={booking}
+              pendingAction={pendingAction}
+              onAction={updateStatus}
+            />
+          ))
+        )}
       </div>
     </section>
   )
 }
-function BookingCard({
+function BookingRow({
   booking,
   pendingAction,
   onAction,
@@ -310,63 +274,48 @@ function BookingCard({
   const isCancelling = pendingAction === `${booking.id}-cancel`
 
   return (
-    <Card className="gap-3 shadow-sm">
-      <CardContent className="flex flex-col gap-3">
-        <div>
-          <p className="flex items-center gap-1.5 font-semibold">
-            <CalendarDays className="size-4 text-primary" />
-            {formatDate(booking.startTime)}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {formatTimeRange(booking.startTime, booking.endTime)} ·{' '}
-            {hoursBetween(booking.startTime, booking.endTime)} giờ
-          </p>
+    <div className="grid gap-4 border-b border-border px-3 py-4 last:border-b-0 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-center sm:px-4">
+      <div>
+        <p className="text-base font-bold tracking-tight">{formatTimeRange(booking.startTime, booking.endTime)}</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {formatDate(booking.startTime)} · {hoursBetween(booking.startTime, booking.endTime)} giờ
+        </p>
+      </div>
+      <div className="min-w-0 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold">{booking.user.name}</p>
+          <Badge variant="outline" className={statusMeta.className}>
+            <span className={`size-1.5 rounded-full ${statusMeta.dot}`} />
+            {statusMeta.label}
+          </Badge>
         </div>
-
-        <div className="flex flex-col gap-1 border-t pt-3 text-sm">
-          <p className="font-medium">{booking.user.name}</p>
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
           {booking.user.phone && (
-            <a
-              href={`tel:${booking.user.phone}`}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-            >
+            <a href={`tel:${booking.user.phone}`} className="flex items-center gap-1.5 hover:text-foreground">
               <Phone className="size-3.5" /> {booking.user.phone}
             </a>
           )}
           {booking.user.email && (
-            <a
-              href={`mailto:${booking.user.email}`}
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-            >
+            <a href={`mailto:${booking.user.email}`} className="flex items-center gap-1.5 hover:text-foreground">
               <Mail className="size-3.5" /> {booking.user.email}
             </a>
           )}
         </div>
-
-        <div className="flex items-center justify-between border-t pt-3">
-          <span className="font-semibold text-primary">{formatVND(bookingTotal(booking))}</span>
-          <Badge variant="outline" className={statusMeta.className}>
-            {statusMeta.label}
-          </Badge>
-        </div>
-
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+        <span className="font-semibold text-primary">{formatVND(bookingTotal(booking))}</span>
         {booking.status !== 'CANCELLED' && (
           <div className="flex gap-2">
             {booking.status === 'PENDING' && (
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => onAction(booking, 'confirm')}
-                disabled={isConfirming}
-              >
+              <Button size="sm" onClick={() => onAction(booking, 'confirm')} disabled={isConfirming}>
                 <CheckCircle2 />
                 {isConfirming ? 'Đang xử lý...' : 'Xác nhận'}
               </Button>
             )}
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className={booking.status === 'PENDING' ? '' : 'flex-1'}
+              className="text-destructive hover:text-destructive"
               onClick={() => onAction(booking, 'cancel')}
               disabled={isCancelling}
             >
@@ -375,42 +324,7 @@ function BookingCard({
             </Button>
           </div>
         )}
-      </CardContent>
-    </Card>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string
-  value: string
-  icon: React.ReactNode
-  tone: 'primary' | 'amber' | 'emerald'
-}) {
-  const tones = {
-    primary: 'bg-primary/10 text-primary',
-    amber: 'bg-amber-100 text-amber-700',
-    emerald: 'bg-emerald-100 text-emerald-700',
-  }
-  const values = {
-    primary: 'text-primary',
-    amber: 'text-amber-600',
-    emerald: 'text-emerald-600',
-  }
-
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className={`text-2xl font-bold ${values[tone]}`}>{value}</p>
-        </div>
-        <div className={`rounded-xl p-3 ${tones[tone]}`}>{icon}</div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

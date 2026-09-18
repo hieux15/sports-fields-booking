@@ -51,7 +51,7 @@ export function OwnerCourtCard({
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className="shadow-none">
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div
@@ -83,12 +83,12 @@ export function OwnerCourtCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 border-t pt-4">
+        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
           <Button size="sm" nativeButton={false} render={<Link href={`/owner/courts/${court.id}`} />}>
             <CalendarCheck /> Quản lý đơn
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             nativeButton={false}
             render={<Link href={`/owner/courts/${court.id}/edit`} />}
@@ -97,7 +97,7 @@ export function OwnerCourtCard({
           </Button>
           <AlertDialog>
             <AlertDialogTrigger
-              render={<Button variant="destructive" size="sm" />}
+              render={<Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" />}
               disabled={deleting}
             >
               <Trash2 /> Xóa

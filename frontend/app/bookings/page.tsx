@@ -11,7 +11,7 @@ import type { BookingStatus, BookingWithCourt } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -149,25 +149,18 @@ export default function BookingsPage() {
         </p>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <Card className="shadow-sm">
-          <CardContent className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground">Đơn sắp tới</p>
-            <p className="text-2xl font-bold">{counts.upcoming}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground">Chờ chủ sân xác nhận</p>
-            <p className="text-2xl font-bold text-amber-600">{counts.pending}</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground">Tổng giá trị đơn chưa hủy</p>
-            <p className="text-2xl font-bold text-primary">{formatVND(counts.spent)}</p>
-          </CardContent>
-        </Card>
+      <div className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border py-3 text-sm">
+        <span>
+          <strong className="text-foreground">{counts.upcoming}</strong>{' '}
+          <span className="text-muted-foreground">lịch sắp tới</span>
+        </span>
+        <span>
+          <strong className="text-amber-700">{counts.pending}</strong>{' '}
+          <span className="text-muted-foreground">đơn chờ xác nhận</span>
+        </span>
+        <span className="text-muted-foreground">
+          Tổng giá trị đơn chưa hủy: <strong className="text-foreground">{formatVND(counts.spent)}</strong>
+        </span>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -240,64 +233,62 @@ export default function BookingsPage() {
                 </h2>
                 <span className="h-px flex-1 bg-border" />
               </div>
-              <div className="flex flex-col gap-4">
-                {group.items.map(item => {
-            const meta = bookingStatusMeta(item.status)
-            return (
-              <Card key={item.id} className="shadow-sm">
-                <CardHeader className="border-b">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-lg">{item.court.name}</CardTitle>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin className="size-3.5" />
-                        {item.court.address || 'Chưa cập nhật địa chỉ'}
-                      </p>
+              <div className="border-y border-border">
+                {group.items.map((item, index) => {
+                  const meta = bookingStatusMeta(item.status)
+                  const isFeatured = index === 0 && group.key !== 'past'
+                  return (
+                    <div
+                      key={item.id}
+                      className={`grid gap-4 border-b border-border px-3 py-4 last:border-b-0 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-center sm:px-4 ${
+                        isFeatured ? 'bg-primary/5' : 'bg-background'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-lg font-bold tracking-tight text-foreground">
+                          {formatTimeRange(item.startTime, item.endTime)}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatDate(item.startTime)}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-semibold">{item.court.name}</p>
+                          <Badge variant="outline" className={meta.className}>
+                            <span className={`size-1.5 rounded-full ${meta.dot}`} />
+                            {meta.label}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-muted-foreground">
+                          <MapPin className="size-3.5 shrink-0" />
+                          {item.court.address || 'Chưa cập nhật địa chỉ'}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+                        <p className="font-semibold text-primary">{formatVND(bookingTotal(item))}</p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            nativeButton={false}
+                            render={<Link href={`/courts/${item.courtId}`} />}
+                          >
+                            <Store /> Xem sân
+                          </Button>
+                          {canCancel(item) && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setCancelling(item)}
+                            >
+                              <Ban /> Hủy đơn
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <Badge variant="outline" className={meta.className}>
-                      <span className={`size-1.5 rounded-full ${meta.dot}`} />
-                      {meta.label}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                      <CalendarDays className="size-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold">{formatDate(item.startTime)}</p>
-                      <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Clock3 className="size-3.5" />
-                        {formatTimeRange(item.startTime, item.endTime)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end">
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Tổng tiền</p>
-                      <p className="font-bold text-primary">{formatVND(bookingTotal(item))}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        nativeButton={false}
-                        render={<Link href={`/courts/${item.courtId}`} />}
-                      >
-                        <Store /> Xem sân
-                      </Button>
-                      {canCancel(item) && (
-                        <Button variant="destructive" size="sm" onClick={() => setCancelling(item)}>
-                          <Ban /> Hủy đơn
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
+                  )
                 })}
               </div>
             </section>

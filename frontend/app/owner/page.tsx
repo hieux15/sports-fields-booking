@@ -6,13 +6,10 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  Hourglass,
   Phone,
   Plus,
   RefreshCw,
   Store,
-  TrendingUp,
-  Wallet,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
@@ -144,53 +141,6 @@ export default function OwnerPage() {
         </div>
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="shadow-sm">
-          <CardContent className="flex items-center gap-3">
-            <div className="rounded-xl bg-primary/10 p-3 text-primary">
-              <Store className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Sân đang quản lý</p>
-              <p className="text-2xl font-bold">{stats.courts}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="flex items-center gap-3">
-            <div className="rounded-xl bg-amber-100 p-3 text-amber-700">
-              <Hourglass className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Đơn chờ xác nhận</p>
-              <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="flex items-center gap-3">
-            <div className="rounded-xl bg-sky-100 p-3 text-sky-700">
-              <TrendingUp className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Đơn chưa hủy</p>
-              <p className="text-2xl font-bold">{stats.active}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardContent className="flex items-center gap-3">
-            <div className="rounded-xl bg-emerald-100 p-3 text-emerald-700">
-              <Wallet className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Doanh thu đã xác nhận</p>
-              <p className="text-2xl font-bold text-primary">{formatVND(stats.revenue)}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {error && (
         <Card className="mb-8 shadow-sm">
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
@@ -208,15 +158,16 @@ export default function OwnerPage() {
           <Card className="mb-8 shadow-sm">
             <CardHeader className="border-b">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <CardTitle className="flex items-center gap-2">
-                  <Clock3 className="size-4 text-amber-600" /> Đơn chờ bạn xác nhận
+                  <CardTitle className="flex items-center gap-2">
+                  <Clock3 className="size-4 text-amber-600" />
+                  {pendingBookings.length > 0
+                    ? `${pendingBookings.length} đơn cần xử lý`
+                    : 'Đơn cần xử lý'}
                   {pendingBookings.length > 0 && (
                     <Badge variant="destructive">{pendingBookings.length}</Badge>
                   )}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Xác nhận sớm để khách yên tâm giữ lịch.
-                </p>
+                <p className="text-sm text-muted-foreground">Xếp theo thời gian bắt đầu.</p>
               </div>
             </CardHeader>
             <CardContent className="pt-5">
@@ -229,9 +180,7 @@ export default function OwnerPage() {
                 <div className="flex flex-col items-center gap-2 py-10 text-center">
                   <CheckCircle2 className="size-9 text-emerald-500" />
                   <p className="font-medium">Không có đơn nào đang chờ</p>
-                  <p className="text-sm text-muted-foreground">
-                    Mọi đơn đặt sân của bạn đã được xử lý.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Không còn đơn nào cần bạn xử lý.</p>
                 </div>
               ) : (
                 <div className="flex flex-col divide-y">
@@ -283,6 +232,25 @@ export default function OwnerPage() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-border py-3 text-sm">
+            <span>
+              <strong className="text-foreground">{stats.courts}</strong>{' '}
+              <span className="text-muted-foreground">sân đang quản lý</span>
+            </span>
+            <span>
+              <strong className="text-foreground">{stats.active}</strong>{' '}
+              <span className="text-muted-foreground">đơn chưa hủy</span>
+            </span>
+            <span>
+              <strong className="text-emerald-700">{stats.confirmed}</strong>{' '}
+              <span className="text-muted-foreground">đơn đã xác nhận</span>
+            </span>
+            <span className="text-muted-foreground">
+              Doanh thu đã xác nhận:{' '}
+              <strong className="text-foreground">{formatVND(stats.revenue)}</strong>
+            </span>
+          </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-xl font-bold">Sân của bạn</h2>
