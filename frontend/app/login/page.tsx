@@ -3,17 +3,17 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight, CircleUserRound, Sparkles, Store, Volleyball } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
+import { AuthBrandPanel } from '@/components/auth-brand-panel'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 const DEMO_ACCOUNTS = [
-  { role: 'Khách đặt sân', email: 'customer@test.com', icon: CircleUserRound },
-  { role: 'Chủ sân', email: 'owner@test.com', icon: Store },
+  { role: 'Khách đặt sân', email: 'customer@test.com' },
+  { role: 'Chủ sân', email: 'owner@test.com' },
 ]
 
 export default function LoginPage() {
@@ -45,110 +45,88 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-20">
-      <div className="hidden lg:block">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-800 via-emerald-600 to-teal-400 p-10 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.3),transparent_55%)]" />
-          <Volleyball className="relative size-12" />
-          <h1 className="relative mt-6 text-3xl font-bold leading-snug">
-            Chào mừng trở lại với Sân Việt
-          </h1>
-          <p className="relative mt-4 max-w-sm text-emerald-50/90">
-            Đăng nhập để đặt sân, theo dõi lịch chơi hoặc quản lý đơn đặt sân của sân bạn phụ trách.
+    <div className="mx-auto grid max-w-6xl lg:grid-cols-2 lg:items-stretch lg:px-6 lg:py-12">
+      <AuthBrandPanel
+        headline="Chào mừng trở lại"
+        support="Đăng nhập để đặt sân, theo dõi lịch chơi hoặc quản lý đơn của sân bạn."
+      />
+
+      <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 bg-card px-4 py-10 sm:px-6 lg:px-10 lg:py-12 lg:ring-1 lg:ring-border/80">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Đăng nhập</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dùng email và mật khẩu của bạn để tiếp tục.
           </p>
-          <div className="relative mt-8 flex flex-col gap-2 text-sm text-emerald-50/90">
-            <span className="flex items-center gap-2">
-              <Sparkles className="size-4" /> Hơn 4 loại sân: bóng đá, cầu lông, tennis, pickleball
-            </span>
-            <span className="flex items-center gap-2">
-              <Sparkles className="size-4" /> Chủ sân xác nhận đơn ngay trong ngày
-            </span>
+        </div>
+
+        <form onSubmit={submit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              className="h-11"
+              type="email"
+              autoComplete="email"
+              placeholder="ban@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password">Mật khẩu</Label>
+            <Input
+              id="password"
+              className="h-11"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Ít nhất 6 ký tự"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+          <Button type="submit" disabled={submitting} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {!submitting && <ArrowRight data-icon="inline-end" />}
+          </Button>
+        </form>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Chưa có tài khoản?{' '}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            Đăng ký ngay
+          </Link>
+        </p>
+
+        <div className="border-t border-border/80 pt-4">
+          <p className="text-xs text-muted-foreground">Tài khoản demo — mật khẩu 123456</p>
+          <div className="mt-2 flex flex-col gap-1">
+            {DEMO_ACCOUNTS.map(account => (
+              <button
+                key={account.email}
+                type="button"
+                className="rounded-md px-1 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted/80"
+                onClick={() => {
+                  setEmail(account.email)
+                  setPassword('123456')
+                }}
+              >
+                <span className="font-medium">{account.role}</span>
+                <span className="text-muted-foreground"> — {account.email}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
-
-      <Card className="mx-auto w-full max-w-md shadow-lg">
-        <CardContent className="flex flex-col gap-6 pt-6">
-          <div>
-            <h2 className="text-2xl font-bold">Đăng nhập</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Dùng email và mật khẩu của bạn để tiếp tục.
-            </p>
-          </div>
-
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                className="h-11"
-                type="email"
-                autoComplete="email"
-                placeholder="ban@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input
-                id="password"
-                className="h-11"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Ít nhất 6 ký tự"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-
-            {error && (
-              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
-            )}
-
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
-              {!submitting && <ArrowRight data-icon="inline-end" />}
-            </Button>
-          </form>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Chưa có tài khoản?{' '}
-            <Link href="/register" className="font-medium text-primary hover:underline">
-              Đăng ký ngay
-            </Link>
-          </p>
-
-          <div className="flex flex-col gap-2 rounded-xl border border-dashed p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              Tài khoản demo (mật khẩu 123456)
-            </p>
-            {DEMO_ACCOUNTS.map(account => {
-              const Icon = account.icon
-              return (
-                <Button
-                  key={account.email}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start"
-                  onClick={() => {
-                    setEmail(account.email)
-                    setPassword('123456')
-                  }}
-                >
-                  <Icon /> {account.role} — {account.email}
-                </Button>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
