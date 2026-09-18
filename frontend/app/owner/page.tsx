@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
-import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
+import { bookingTotal, isActiveBooking, isConfirmedBooking, statusCount } from '@/lib/booking-utils'
+import { formatDate, formatTimeRange, formatVND } from '@/lib/format'
 import type { Court, OwnerBooking } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { OwnerCourtCard } from '@/components/owner-court-card'
@@ -25,10 +26,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-
-function bookingTotal(booking: OwnerBooking) {
-  return hoursBetween(booking.startTime, booking.endTime) * Number(booking.court.pricePerHour)
-}
 
 export default function OwnerPage() {
   const { user, loading: authLoading } = useAuth()
@@ -65,12 +62,15 @@ export default function OwnerPage() {
   }, [authLoading, load])
 
   const stats = useMemo(() => {
-    const active = bookings.filter(item => item.status !== 'CANCELLED')
+    const active = bookings.filter(isActiveBooking)
     return {
       courts: courts.length,
       active: active.length,
-      pending: bookings.filter(item => item.status === 'PENDING').length,
-      revenue: active.reduce((sum, item) => sum + bookingTotal(item), 0),
+      pending: statusCount(bookings, 'PENDING'),
+      confirmed: statusCount(bookings, 'CONFIRMED'),
+      revenue: bookings
+        .filter(isConfirmedBooking)
+        .reduce((sum, item) => sum + bookingTotal(item), 0),
     }
   }, [bookings, courts])
 
@@ -131,7 +131,7 @@ export default function OwnerPage() {
           </p>
           <h1 className="mt-1 text-3xl font-bold">Tổng quan sân của bạn</h1>
           <p className="mt-2 text-muted-foreground">
-            Xác nhận đơn đặt sân, cập nhật giá và khung giờ hoạt động của từng sân.
+            Xử lý đơn mới trước, sau đó cập nhật thông tin và khung giờ hoạt động của từng sân.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export default function OwnerPage() {
               <Wallet className="size-5" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Doanh thu dự kiến</p>
+              <p className="text-xs text-muted-foreground">Doanh thu đã xác nhận</p>
               <p className="text-2xl font-bold text-primary">{formatVND(stats.revenue)}</p>
             </div>
           </CardContent>

@@ -5,7 +5,8 @@ import { Ban, CalendarDays, Clock3, MapPin, RefreshCw, Search, Store } from 'luc
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
-import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
+import { bookingTotal, isActiveBooking, isUpcomingBooking } from '@/lib/booking-utils'
+import { formatDate, formatTimeRange, formatVND } from '@/lib/format'
 import type { BookingStatus, BookingWithCourt } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { Badge } from '@/components/ui/badge'
@@ -31,8 +32,22 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'CANCELLED', label: 'Đã hủy' },
 ]
 
-function bookingTotal(booking: BookingWithCourt) {
-  return hoursBetween(booking.startTime, booking.endTime) * Number(booking.court.pricePerHour)
+const BOOKING_GROUPS = [
+  { key: 'today', label: 'Hôm nay' },
+  { key: 'upcoming', label: 'Sắp tới' },
+  { key: 'past', label: 'Đã qua' },
+] as const
+
+function bookingGroup(startTime: string) {
+  const start = new Date(startTime)
+  const now = new Date()
+  const isToday =
+    start.getFullYear() === now.getFullYear() &&
+    start.getMonth() === now.getMonth() &&
+    start.getDate() === now.getDate()
+
+  if (isToday) return 'today'
+  return start > now ? 'upcoming' : 'past'
 }
 
 export default function BookingsPage() {
@@ -64,14 +79,23 @@ export default function BookingsPage() {
     [items, status]
   )
 
+  const grouped = useMemo(
+    () =>
+      BOOKING_GROUPS.map(group => ({
+        ...group,
+        items: filtered
+          .filter(item => bookingGroup(item.startTime) === group.key)
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+      })).filter(group => group.items.length > 0),
+    [filtered]
+  )
+
   const counts = useMemo(
     () => ({
-      upcoming: items.filter(
-        item => item.status !== 'CANCELLED' && new Date(item.startTime) > new Date()
-      ).length,
+      upcoming: items.filter(item => isUpcomingBooking(item)).length,
       pending: items.filter(item => item.status === 'PENDING').length,
       spent: items
-        .filter(item => item.status !== 'CANCELLED')
+        .filter(item => isActiveBooking(item))
         .reduce((sum, item) => sum + bookingTotal(item), 0),
     }),
     [items]
@@ -140,7 +164,7 @@ export default function BookingsPage() {
         </Card>
         <Card className="shadow-sm">
           <CardContent className="flex flex-col gap-1">
-            <p className="text-xs text-muted-foreground">Tổng chi (chưa hủy)</p>
+            <p className="text-xs text-muted-foreground">Tổng giá trị đơn chưa hủy</p>
             <p className="text-2xl font-bold text-primary">{formatVND(counts.spent)}</p>
           </CardContent>
         </Card>
@@ -195,16 +219,29 @@ export default function BookingsPage() {
                 : 'Không có đơn nào ở trạng thái này'}
             </p>
             <p className="text-sm text-muted-foreground">
-              Hãy khám phá sân gần bạn và bắt đầu một trận đấu.
+              {items.length === 0
+                ? 'Hãy khám phá sân gần bạn và bắt đầu một trận đấu.'
+                : 'Thử chọn trạng thái khác để xem các đơn còn lại.'}
             </p>
-            <Button className="mt-3" nativeButton={false} render={<Link href="/courts" />}>
-              <Search /> Tìm sân ngay
-            </Button>
+            {items.length === 0 && (
+              <Button className="mt-3" nativeButton={false} render={<Link href="/courts" />}>
+                <Search /> Tìm sân ngay
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="flex flex-col gap-4">
-          {filtered.map(item => {
+        <div className="flex flex-col gap-8">
+          {grouped.map(group => (
+            <section key={group.key}>
+              <div className="mb-3 flex items-center gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+                  {group.label}
+                </h2>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <div className="flex flex-col gap-4">
+                {group.items.map(item => {
             const meta = bookingStatusMeta(item.status)
             return (
               <Card key={item.id} className="shadow-sm">
@@ -261,7 +298,10 @@ export default function BookingsPage() {
                 </CardContent>
               </Card>
             )
-          })}
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

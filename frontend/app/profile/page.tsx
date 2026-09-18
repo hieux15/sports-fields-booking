@@ -15,12 +15,24 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 
+function initials(name: string) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(-2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+}
+
 export default function ProfilePage() {
   const { user, loading: authLoading, refresh, logout } = useAuth()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const isDirty = Boolean(user && (name !== user.name || phone !== (user.phone ?? '')))
 
   useEffect(() => {
     if (!user) return
@@ -84,8 +96,8 @@ export default function ProfilePage() {
       <Card className="mb-6 shadow-sm">
         <CardContent className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <UserRound className="size-6" />
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground">
+              {initials(user.name)}
             </div>
             <div>
               <p className="font-semibold">{user.name}</p>
@@ -154,13 +166,29 @@ export default function ProfilePage() {
               </p>
             )}
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-              <Button type="button" variant="ghost" onClick={logout}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={logout}>
                 <LogOut /> Đăng xuất
               </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row-reverse">
+                {isDirty && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setName(user.name)
+                      setPhone(user.phone ?? '')
+                      setError(null)
+                    }}
+                    disabled={saving}
+                  >
+                    Hoàn tác
+                  </Button>
+                )}
+                <Button type="submit" disabled={saving || !isDirty}>
+                  {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>
