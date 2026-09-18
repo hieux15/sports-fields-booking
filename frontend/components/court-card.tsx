@@ -14,9 +14,10 @@ export function CourtCard({ court }: { court: Court }) {
   return (
     <Card className="h-full gap-0 py-0 shadow-sm ring-1 ring-foreground/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
       <div
-        className={`relative flex h-36 items-end bg-gradient-to-br ${meta.gradient} p-5 text-white`}
+        className="relative flex h-36 items-end bg-cover bg-center p-5 text-white"
+        style={{ backgroundImage: `url(${meta.image})` }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_60%)]" />
+        <div className={`absolute inset-0 ${meta.overlay}`} />
         <span className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
           <Icon className="size-6" />
         </span>

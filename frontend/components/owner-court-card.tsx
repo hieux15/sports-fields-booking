@@ -55,9 +55,11 @@ export function OwnerCourtCard({
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div
-            className={`flex size-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${meta.gradient} text-white`}
+            className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cover bg-center text-white"
+            style={{ backgroundImage: `url(${meta.image})` }}
           >
-            <Icon className="size-6" />
+            <div className={`absolute inset-0 ${meta.overlay}`} />
+            <Icon className="relative size-6" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">

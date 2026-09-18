@@ -184,9 +184,11 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <span
-            className={`flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br ${meta.gradient} text-white`}
+            className="relative flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-cover bg-center text-white"
+            style={{ backgroundImage: `url(${meta.image})` }}
           >
-            <Icon className="size-7" />
+            <span className={`absolute inset-0 ${meta.overlay}`} />
+            <Icon className="relative size-7" />
           </span>
           <div>
             <h1 className="text-2xl font-bold">{court.name}</h1>

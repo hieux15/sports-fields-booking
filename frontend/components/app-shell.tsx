@@ -2,16 +2,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  CalendarDays,
   ChevronDown,
   CircleUserRound,
   LogOut,
   Menu,
-  Plus,
-  Search,
-  Sparkles,
-  Store,
-  Volleyball,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -32,16 +26,16 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> }
+type NavItem = { href: string; label: string }
 
 const CUSTOMER_NAV: NavItem[] = [
-  { href: '/courts', label: 'Tìm sân', icon: Search },
-  { href: '/bookings', label: 'Đơn đặt sân', icon: CalendarDays },
+  { href: '/courts', label: 'Tìm sân' },
+  { href: '/bookings', label: 'Đơn đặt sân' },
 ]
 
 const OWNER_NAV: NavItem[] = [
-  { href: '/owner', label: 'Tổng quan', icon: Store },
-  { href: '/owner/courts/new', label: 'Thêm sân', icon: Plus },
+  { href: '/owner', label: 'Tổng quan' },
+  { href: '/owner/courts/new', label: 'Thêm sân' },
 ]
 
 function isActive(path: string, href: string) {
@@ -55,20 +49,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const items = user?.role === 'OWNER' ? OWNER_NAV : CUSTOMER_NAV
 
   const nav = (
-    <div className="flex flex-col gap-1 md:flex-row md:items-center">
+    <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-6">
       {items.map(item => {
-        const Icon = item.icon
+        const active = isActive(path, item.href)
         return (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              isActive(path, item.href)
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            className={`border-l-2 px-3 py-2 text-sm transition-colors md:border-l-0 md:border-b-2 md:px-0 md:py-1 ${
+              active
+                ? 'border-primary font-medium text-foreground'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon className="size-4" />
             {item.label}
           </Link>
         )
@@ -77,27 +70,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50/70">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link
             href={user?.role === 'OWNER' ? '/owner' : '/courts'}
-            className="flex items-center gap-2.5"
+            className="font-display text-2xl font-extrabold uppercase tracking-[0.06em] text-foreground sm:text-[1.65rem]"
           >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-700 to-teal-400 text-white shadow-sm">
-              <Volleyball className="size-5" />
-            </span>
-            <span className="flex flex-col leading-none">
-              <span className="text-lg font-bold tracking-tight">Sân Việt</span>
-              <span className="text-[0.7rem] text-muted-foreground">Đặt sân thể thao</span>
-            </span>
+            Sân Việt
           </Link>
 
           <nav className="hidden md:block">{nav}</nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {loading ? (
-              <div className="size-10 animate-pulse rounded-full bg-muted" />
+              <div className="size-9 animate-pulse rounded-md bg-muted" />
             ) : user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button variant="ghost" className="gap-2 px-2" />}>
@@ -122,7 +109,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -140,14 +127,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <Sheet>
               <SheetTrigger
-                className="inline-flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted md:hidden"
+                className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted md:hidden"
                 aria-label="Mở menu"
               >
                 <Menu />
               </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Điều hướng</SheetTitle>
+                  <SheetTitle className="font-display text-xl font-extrabold uppercase tracking-[0.06em]">
+                    Sân Việt
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="px-4">{nav}</div>
               </SheetContent>
@@ -156,12 +145,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {isMockMode() && showMock && (
-          <div className="border-t bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          <div className="border-t border-amber-200/80 bg-amber-50/90 px-4 py-2 text-sm text-amber-950">
             <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3">
-              <span className="flex items-center gap-2">
-                <Sparkles className="size-4" />
-                Đang dùng dữ liệu mẫu (NEXT_PUBLIC_USE_MOCK=1)
-              </span>
+              <span>Đang dùng dữ liệu mẫu (NEXT_PUBLIC_USE_MOCK=1)</span>
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -177,17 +163,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t bg-background">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p>© {new Date().getFullYear()} Sân Việt — Nền tảng đặt sân thể thao.</p>
-          <div className="flex items-center gap-4">
-            <Link href="/courts" className="hover:text-foreground">
-              Danh sách sân
-            </Link>
-            <Link href="/bookings" className="hover:text-foreground">
-              Đơn đặt sân
-            </Link>
-          </div>
+      <footer className="border-t border-border/80">
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
+          <p className="font-display text-sm font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            Sân Việt
+          </p>
         </div>
       </footer>
     </div>

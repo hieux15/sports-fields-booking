@@ -212,9 +212,10 @@ return (
       <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
         <div className="flex flex-col gap-6">
           <div
-            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${meta.gradient} p-8 text-white`}
+            className="relative overflow-hidden rounded-2xl bg-cover bg-center p-8 text-white"
+            style={{ backgroundImage: `url(${meta.image})` }}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.3),transparent_55%)]" />
+            <div className={`absolute inset-0 ${meta.overlay}`} />
             <Icon className="absolute -bottom-4 right-2 size-32 opacity-20" />
             <div className="relative">
               <Badge className="border-0 bg-white/15 text-white">{meta.label}</Badge>
