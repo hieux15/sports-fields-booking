@@ -1,66 +1,70 @@
 import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { courtTypeMeta } from '@/lib/court-type'
 import { formatVND } from '@/lib/format'
 import type { Court } from '@/lib/types'
 
-export function CourtCard({ court }: { court: Court }) {
+export function CourtCard({
+  court,
+  index = 0,
+}: {
+  court: Court
+  /** Stagger index for list fade-in on filter change. */
+  index?: number
+}) {
   const meta = courtTypeMeta(court.type)
-  const Icon = meta.icon
 
   return (
-    <Card className="h-full gap-0 py-0 shadow-sm ring-1 ring-foreground/5 transition duration-200 hover:-translate-y-1 hover:shadow-xl">
-      <div
-        className="relative flex h-36 items-end bg-cover bg-center p-5 text-white"
-        style={{ backgroundImage: `url(${meta.image})` }}
+    <article
+      className="court-list-item group border-b border-border/80 last:border-b-0"
+      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+    >
+      <Link
+        href={`/courts/${court.id}`}
+        className="grid gap-4 py-6 sm:grid-cols-[minmax(0,220px)_1fr] sm:items-stretch sm:gap-6"
       >
-        <div className={`absolute inset-0 ${meta.overlay}`} />
-        <span className="absolute right-4 top-4 flex size-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-          <Icon className="size-6" />
-        </span>
-        <div className="relative">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-white/75">
+        <div className="relative aspect-[16/10] overflow-hidden sm:aspect-auto sm:min-h-[140px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={meta.image}
+            alt=""
+            className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.03]"
+          />
+          <div className={`absolute inset-0 ${meta.overlay}`} />
+          <span className="absolute bottom-3 left-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-white/85">
             {meta.label}
-          </p>
-          <h3 className="mt-1 line-clamp-1 text-xl font-semibold">{court.name}</h3>
-        </div>
-      </div>
-
-      <CardContent className="flex flex-1 flex-col gap-3 pb-5">
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
-          <span className="line-clamp-2">{court.address || 'Chưa cập nhật địa chỉ'}</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock3 className="size-4 shrink-0 text-primary" />
-          <span>
-            Mở cửa {court.openTime} – {court.closeTime}
           </span>
         </div>
-        <div className="mt-auto flex items-end justify-between gap-3 border-t pt-4">
+
+        <div className="flex min-w-0 flex-col justify-between gap-4">
           <div>
-            <p className="text-xs text-muted-foreground">Giá thuê</p>
-            <p className="text-lg font-bold text-primary">
+            <h3 className="text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-2xl">
+              {court.name}
+            </h3>
+            <p className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span className="line-clamp-2">{court.address || 'Chưa cập nhật địa chỉ'}</span>
+            </p>
+            <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock3 className="size-4 shrink-0 text-primary" />
+              <span>
+                Mở cửa {court.openTime} – {court.closeTime}
+              </span>
+            </p>
+          </div>
+
+          <div className="flex items-end justify-between gap-3">
+            <p className="text-lg font-bold text-accent-foreground">
               {formatVND(Number(court.pricePerHour))}
               <span className="text-sm font-normal text-muted-foreground">/giờ</span>
             </p>
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+              Xem &amp; đặt
+              <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </span>
           </div>
-          <Badge variant="secondary" className="mb-1">
-            {meta.label}
-          </Badge>
         </div>
-        <Button
-          className="w-full"
-          nativeButton={false}
-          render={<Link href={`/courts/${court.id}`} />}
-        >
-          Xem &amp; đặt sân
-          <ArrowUpRight data-icon="inline-end" />
-        </Button>
-      </CardContent>
-    </Card>
+      </Link>
+    </article>
   )
 }

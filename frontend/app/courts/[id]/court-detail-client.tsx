@@ -10,8 +10,6 @@ import {
   MapPin,
   Phone,
   RefreshCw,
-  ShieldCheck,
-  Sparkles,
   Store,
 } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -20,7 +18,6 @@ import { courtTypeMeta } from '@/lib/court-type'
 import { formatVND, hoursBetween } from '@/lib/format'
 import type { CourtDetail } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -101,7 +98,6 @@ export default function CourtDetailClient({ id }: { id: string }) {
   }, [id])
 
   const meta = courtTypeMeta(court?.type ?? '')
-  const Icon = meta.icon
   const total = useMemo(() => {
     if (!court || !date || !start || !end || start >= end) return 0
     const startIso = new Date(`${date}T${start}`).toISOString()
@@ -169,13 +165,16 @@ export default function CourtDetailClient({ id }: { id: string }) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
-          <div className="flex flex-col gap-6">
-            <Skeleton className="h-52 rounded-2xl" />
-            <Skeleton className="h-40 rounded-xl" />
+      <div>
+        <Skeleton className="h-[min(48vh,420px)] w-full rounded-none" />
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+            <Skeleton className="h-96" />
           </div>
-          <Skeleton className="h-96 rounded-xl" />
         </div>
       </div>
     )
@@ -200,92 +199,93 @@ export default function CourtDetailClient({ id }: { id: string }) {
       </div>
     )
   }
-return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Link
-        href="/courts"
-        className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" /> Quay lại danh sách
-      </Link>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_400px]">
-        <div className="flex flex-col gap-6">
-          <div
-            className="relative overflow-hidden rounded-2xl bg-cover bg-center p-8 text-white"
-            style={{ backgroundImage: `url(${meta.image})` }}
+  return (
+    <div>
+      {/* Full-bleed photo hero */}
+      <section className="relative min-h-[min(48vh,420px)] overflow-hidden text-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={meta.image}
+          alt=""
+          className="hero-photo absolute inset-0 size-full object-cover"
+        />
+        <div className={`absolute inset-0 ${meta.overlay}`} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
+
+        <div className="relative mx-auto flex min-h-[min(48vh,420px)] max-w-7xl flex-col justify-end px-4 pb-8 pt-16 sm:px-6 sm:pb-10">
+          <Link
+            href="/courts"
+            className="mb-auto inline-flex w-fit items-center gap-2 text-sm text-white/80 transition-colors hover:text-white"
           >
-            <div className={`absolute inset-0 ${meta.overlay}`} />
-            <Icon className="absolute -bottom-4 right-2 size-32 opacity-20" />
-            <div className="relative">
-              <Badge className="border-0 bg-white/15 text-white">{meta.label}</Badge>
-              <h1 className="mt-6 text-4xl font-bold">{court.name}</h1>
-              <div className="mt-4 flex items-center gap-2 text-white/90">
-                <MapPin className="size-4" /> {court.address || 'Chưa cập nhật địa chỉ'}
+            <ArrowLeft className="size-4" /> Quay lại danh sách
+          </Link>
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-white/75">
+            {meta.label}
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+            {court.name}
+          </h1>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
+          <div className="flex flex-col gap-8">
+            {/* Inline meta: price · hours · type */}
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:text-base">
+              <span className="font-bold text-accent-foreground">
+                {formatVND(Number(court.pricePerHour))}
+                <span className="font-normal text-muted-foreground">/giờ</span>
+              </span>
+              <span aria-hidden className="text-border">
+                ·
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock3 className="size-3.5 shrink-0" />
+                {court.openTime} – {court.closeTime}
+              </span>
+              <span aria-hidden className="text-border">
+                ·
+              </span>
+              <span>{meta.label}</span>
+            </p>
+
+            <div className="flex items-start gap-2 text-sm text-muted-foreground sm:text-base">
+              <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span>{court.address || 'Chưa cập nhật địa chỉ'}</span>
+            </div>
+
+            {/* Owner info — plain divider block, not a marketing card */}
+            <div className="border-t border-border pt-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Chủ sân
+              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-foreground">{court.owner.name}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {court.owner.phone || 'Chưa cập nhật số điện thoại'}
+                  </p>
+                </div>
+                {court.owner.phone && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<a href={`tel:${court.owner.phone}`} />}
+                  >
+                    <Phone /> Liên hệ
+                  </Button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="shadow-sm">
-              <CardContent className="flex flex-col gap-1">
-                <p className="text-xs text-muted-foreground">Giá thuê</p>
-                <p className="text-lg font-bold text-primary">
-                  {formatVND(Number(court.pricePerHour))}
-                  <span className="text-sm font-normal text-muted-foreground">/giờ</span>
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="flex flex-col gap-1">
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Clock3 className="size-3.5" /> Khung giờ hoạt động
-                </p>
-                <p className="text-lg font-semibold">
-                  {court.openTime} – {court.closeTime}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm">
-              <CardContent className="flex flex-col gap-1">
-                <p className="text-xs text-muted-foreground">Loại sân</p>
-                <p className="text-lg font-semibold">{meta.label}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="shadow-sm">
-            <CardHeader className="border-b">
-              <CardTitle className="flex items-center gap-2">
-                <ShieldCheck className="size-4 text-primary" /> Thông tin chủ sân
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Store className="size-5" />
-                </div>
-                <div>
-                  <p className="font-semibold">{court.owner.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {court.owner.phone || 'Chưa cập nhật số điện thoại'}
-                  </p>
-                </div>
-              </div>
-              {court.owner.phone && (
-                <Button variant="outline" nativeButton={false} render={<a href={`tel:${court.owner.phone}`} />}>
-                  <Phone /> Liên hệ
-                </Button>
-              )}
-            </CardContent>
-
-          </Card>
-        </div>
-
-        <div>
-          <Card className="shadow-sm lg:sticky lg:top-24">
-            <CardHeader className="border-b">
-              <CardTitle className="flex items-center gap-2">
+          {/* Booking form — only interactive card surface */}
+          <Card className="border-border shadow-none ring-1 ring-foreground/5 lg:sticky lg:top-20">
+            <CardHeader className="border-b border-border/80">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarDays className="size-4 text-primary" /> Đặt sân
               </CardTitle>
             </CardHeader>
@@ -370,27 +370,29 @@ return (
                         setEnd(addMinutes(next, 90))
                       }}
                     >
-                      <Sparkles /> Giờ hiện tại
+                      <Clock3 /> Giờ hiện tại
                     </Button>
                   </div>
 
-                  <div className="flex flex-col gap-2 rounded-xl bg-muted/60 p-4 text-sm">
+                  <div className="flex flex-col gap-2 border border-border/80 bg-muted/40 p-4 text-sm">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Thời lượng</span>
                       <span className="font-medium">{duration > 0 ? `${duration} giờ` : '—'}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Đơn giá</span>
-                      <span className="font-medium">{formatVND(Number(court.pricePerHour))}/giờ</span>
+                      <span className="font-medium">
+                        {formatVND(Number(court.pricePerHour))}/giờ
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-2 text-base">
+                    <div className="flex items-center justify-between border-t border-border pt-2 text-base">
                       <span className="font-medium">Tạm tính</span>
-                      <span className="font-bold text-primary">{formatVND(total)}</span>
+                      <span className="font-bold text-accent-foreground">{formatVND(total)}</span>
                     </div>
                   </div>
 
                   {formError && (
-                    <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                       {formError}
                     </p>
                   )}

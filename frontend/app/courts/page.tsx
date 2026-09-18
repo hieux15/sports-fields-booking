@@ -1,14 +1,12 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Search, SlidersHorizontal, Sparkles, Store } from 'lucide-react'
+import { RefreshCw, Search, Store } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { COURT_TYPE_OPTIONS, normalizeType, type CourtTypeKey } from '@/lib/court-type'
 import type { Court } from '@/lib/types'
 import { CourtCard } from '@/components/court-card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
@@ -20,12 +18,18 @@ const TYPE_FILTERS: { key: TypeFilter; label: string }[] = [
   ...COURT_TYPE_OPTIONS.map(option => ({ key: option.key as TypeFilter, label: option.label })),
 ]
 
+/** Hero photo — urban futsal / street court atmosphere. */
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1800&q=80'
+
 export default function CourtsPage() {
   const [courts, setCourts] = useState<Court[]>([])
   const [query, setQuery] = useState('')
   const [type, setType] = useState<TypeFilter>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  /** Remount list on filter change so stagger animation replays. */
+  const [listKey, setListKey] = useState(0)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -57,62 +61,88 @@ export default function CourtsPage() {
   }, [courts, query, type])
 
   const hasFilter = query.trim().length > 0 || type !== 'ALL'
-return (
+
+  const setTypeFilter = (next: TypeFilter) => {
+    setType(next)
+    setListKey(k => k + 1)
+  }
+
+  return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-600 to-teal-400 px-4 py-14 text-white sm:py-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.25),transparent_55%)]" />
-        <div className="relative mx-auto max-w-7xl">
-          <div className="max-w-2xl">
-            <Badge className="mb-4 border-0 bg-white/15 text-white">
-              <Sparkles /> Đặt sân thật dễ
-            </Badge>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Tìm sân, đặt lịch,
-              <br />
-              <span className="text-emerald-100">chơi hết mình.</span>
-            </h1>
-            <p className="mt-4 max-w-lg text-base text-emerald-50/90">
-              Khám phá những sân thể thao chất lượng quanh bạn và đặt lịch chỉ trong vài thao tác.
-            </p>
-          </div>
+      {/* First viewport: brand · headline · line · search · full-bleed photo */}
+      <section className="relative min-h-[min(72vh,560px)] overflow-hidden text-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={HERO_IMAGE}
+          alt=""
+          className="hero-photo absolute inset-0 size-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/35" />
+
+        <div className="relative mx-auto flex min-h-[min(72vh,560px)] max-w-7xl flex-col justify-end px-4 pb-12 pt-20 sm:px-6 sm:pb-16">
+          <p className="font-display text-5xl font-extrabold uppercase tracking-[0.08em] sm:text-6xl md:text-7xl">
+            Sân Việt
+          </p>
+          <h1 className="mt-3 max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">
+            Tìm sân gần bạn, đặt lịch nhanh.
+          </h1>
+          <p className="mt-2 max-w-md text-sm text-white/80 sm:text-base">
+            Futsal, cầu lông và sân phố — chọn giờ, xác nhận, chơi.
+          </p>
+
           <div className="relative mt-8 max-w-xl">
             <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Tìm theo tên sân, địa chỉ, loại sân..."
-              className="h-14 border-0 bg-white pl-11 text-foreground shadow-xl placeholder:text-muted-foreground"
+              className="h-12 border-0 bg-white pl-11 text-foreground shadow-none placeholder:text-muted-foreground"
+              aria-label="Tìm sân"
             />
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="sticky top-16 z-30 -mx-4 mb-7 border-b bg-slate-50/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <SlidersHorizontal className="size-4 shrink-0 text-muted-foreground" />
-            {TYPE_FILTERS.map(filter => (
-              <button
-                key={filter.key}
-                type="button"
-                onClick={() => setType(filter.key)}
-                className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition ${
-                  type === filter.key
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-primary'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+        <div className="sticky top-14 z-30 -mx-4 mb-8 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+          <div
+            className="flex items-center gap-0 overflow-x-auto"
+            role="tablist"
+            aria-label="Lọc theo loại sân"
+          >
+            {TYPE_FILTERS.map(filter => {
+              const active = type === filter.key
+              return (
+                <button
+                  key={filter.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTypeFilter(filter.key)}
+                  className={`relative shrink-0 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                    active
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {filter.label}
+                  <span
+                    className={`absolute inset-x-3 bottom-0 h-0.5 origin-left bg-primary transition-transform duration-300 sm:inset-x-4 ${
+                      active ? 'scale-x-100' : 'scale-x-0'
+                    }`}
+                  />
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">Danh sách sân</h2>
+            <h2 className="text-lg font-bold tracking-tight">Danh sách sân</h2>
             <p className="text-sm text-muted-foreground">
-              {loading ? 'Đang tải dữ liệu...' : `${filtered.length}/${courts.length} sân phù hợp`}
+              {loading ? 'Đang tải...' : `${filtered.length} sân`}
+              {hasFilter && !loading ? ` · đã lọc` : ''}
             </p>
           </div>
           {hasFilter && (
@@ -122,6 +152,7 @@ return (
               onClick={() => {
                 setQuery('')
                 setType('ALL')
+                setListKey(k => k + 1)
               }}
             >
               <RefreshCw /> Xóa bộ lọc
@@ -130,47 +161,51 @@ return (
         </div>
 
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-80 rounded-xl" />
+          <div className="flex flex-col divide-y divide-border/80">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="grid gap-4 py-6 sm:grid-cols-[220px_1fr] sm:gap-6">
+                <Skeleton className="aspect-[16/10] w-full sm:aspect-auto sm:h-[140px]" />
+                <div className="flex flex-col gap-3">
+                  <Skeleton className="h-7 w-2/3" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+              </div>
             ))}
           </div>
         ) : error ? (
-          <Card className="shadow-sm">
-            <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-              <p className="font-semibold">Không tải được danh sách sân</p>
-              <p className="max-w-md text-sm text-muted-foreground">{error}</p>
-              <Button onClick={load} className="mt-2">
-                <RefreshCw /> Thử lại
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center gap-3 border border-border py-16 text-center">
+            <p className="font-semibold">Không tải được danh sách sân</p>
+            <p className="max-w-md text-sm text-muted-foreground">{error}</p>
+            <Button onClick={load} className="mt-2">
+              <RefreshCw /> Thử lại
+            </Button>
+          </div>
         ) : filtered.length === 0 ? (
-          <Card className="border-dashed shadow-none">
-            <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-              <Store className="size-10 text-muted-foreground" />
-              <p className="text-lg font-semibold">Không tìm thấy sân nào</p>
-              <p className="text-sm text-muted-foreground">
-                Thử đổi từ khóa hoặc bỏ bộ lọc loại sân để xem toàn bộ danh sách.
-              </p>
-              {hasFilter && (
-                <Button
-                  variant="outline"
-                  className="mt-3"
-                  onClick={() => {
-                    setQuery('')
-                    setType('ALL')
-                  }}
-                >
-                  Xóa bộ lọc
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center gap-2 border border-dashed border-border py-16 text-center">
+            <Store className="size-10 text-muted-foreground" />
+            <p className="text-lg font-semibold">Không tìm thấy sân nào</p>
+            <p className="text-sm text-muted-foreground">
+              Thử đổi từ khóa hoặc bỏ bộ lọc loại sân.
+            </p>
+            {hasFilter && (
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => {
+                  setQuery('')
+                  setType('ALL')
+                  setListKey(k => k + 1)
+                }}
+              >
+                Xóa bộ lọc
+              </Button>
+            )}
+          </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map(court => (
-              <CourtCard key={court.id} court={court} />
+          <div key={listKey} className="flex flex-col">
+            {filtered.map((court, index) => (
+              <CourtCard key={court.id} court={court} index={index} />
             ))}
           </div>
         )}
