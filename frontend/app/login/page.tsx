@@ -27,9 +27,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   const redirectTarget = (role: string) => (role === 'OWNER' ? '/owner' : '/courts')
+  const getReturnTo = () => {
+    if (typeof window === 'undefined') return null
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo')
+    return returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null
+  }
 
   useEffect(() => {
-    if (!authLoading && user) router.replace(redirectTarget(user.role))
+    if (!authLoading && user) router.replace(getReturnTo() ?? redirectTarget(user.role))
   }, [authLoading, router, user])
 
   const submit = async (event: React.FormEvent) => {
@@ -38,7 +43,7 @@ export default function LoginPage() {
     setError(null)
     try {
       const signedIn = await login(email.trim(), password)
-      router.replace(redirectTarget(signedIn.role))
+      router.replace(getReturnTo() ?? redirectTarget(signedIn.role))
     } catch (e) {
       setError(getErrorMessage(e))
     } finally {
@@ -112,7 +117,10 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           Chưa có tài khoản?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link
+            href={`/register${getReturnTo() ? `?returnTo=${encodeURIComponent(getReturnTo()!)}` : ''}`}
+            className="font-medium text-primary hover:underline"
+          >
             Đăng ký ngay
           </Link>
         </p>

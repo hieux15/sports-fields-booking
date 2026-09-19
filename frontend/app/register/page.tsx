@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Store } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
 import { AuthBrandPanel } from '@/components/auth-brand-panel'
@@ -29,6 +29,12 @@ export default function RegisterPage() {
     }
   }, [authLoading, router, user])
 
+  const getReturnTo = () => {
+    if (typeof window === 'undefined') return null
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo')
+    return returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)
@@ -43,7 +49,7 @@ export default function RegisterPage() {
     setSubmitting(true)
     try {
       const created = await register({ email: email.trim(), password, name: name.trim() })
-      router.replace(created.role === 'OWNER' ? '/owner' : '/courts')
+      router.replace(getReturnTo() ?? (created.role === 'OWNER' ? '/owner' : '/courts'))
     } catch (e) {
       setError(getErrorMessage(e))
     } finally {
@@ -60,7 +66,9 @@ export default function RegisterPage() {
 
       <div className="mx-auto flex w-full max-w-md flex-col justify-center gap-6 bg-card px-4 py-10 sm:px-6 lg:px-10 lg:py-12 lg:ring-1 lg:ring-border/80">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Tạo tài khoản</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Tạo tài khoản
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Chỉ mất chưa đến một phút để bắt đầu.
           </p>
@@ -149,6 +157,16 @@ export default function RegisterPage() {
             {!submitting && <ArrowRight data-icon="inline-end" />}
           </Button>
         </form>
+
+        <div className="border-t border-border/80 pt-4">
+          <p className="text-sm font-medium">Bạn có sân muốn cho thuê?</p>
+          <Link
+            href="/owner/setup"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <Store className="size-4" /> Đăng ký trở thành chủ sân
+          </Link>
+        </div>
 
         <p className="text-center text-xs text-muted-foreground">
           Bằng việc đăng ký, bạn đồng ý với điều khoản sử dụng của Sân Việt.

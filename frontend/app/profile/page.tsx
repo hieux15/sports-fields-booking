@@ -121,9 +121,13 @@ export default function ProfilePage() {
                 </>
               )}
             </Badge>
-            {user.role === 'OWNER' && (
+            {user.role === 'OWNER' ? (
               <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/owner" />}>
                 Khu vực chủ sân
+              </Button>
+            ) : (
+              <Button size="sm" nativeButton={false} render={<Link href="/owner/setup" />}>
+                <Store /> Đăng ký thành chủ sân
               </Button>
             )}
           </div>

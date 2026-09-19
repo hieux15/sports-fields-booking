@@ -104,7 +104,7 @@ export default function OwnerPage() {
     }
   }
 
-  if (!authLoading && (!user || user.role !== 'OWNER')) {
+  if (!authLoading && !user) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
         <Store className="mx-auto size-12 text-muted-foreground" />
@@ -112,8 +112,24 @@ export default function OwnerPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Đăng nhập bằng tài khoản chủ sân để quản lý sân và đơn đặt sân của bạn.
         </p>
-        <Button className="mt-6" nativeButton={false} render={<Link href="/login" />}>
+        <Button className="mt-6" nativeButton={false} render={<Link href="/login?returnTo=%2Fowner" />}>
           Đăng nhập
+        </Button>
+      </div>
+    )
+  }
+
+  if (!authLoading && user && user.role !== 'OWNER') {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
+        <Store className="mx-auto size-12 text-muted-foreground" />
+        <h1 className="mt-4 text-xl font-bold">Bạn chưa phải là chủ sân</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Tài khoản hiện tại là khách đặt sân. Đăng ký sân đầu tiên để mở khu vực quản lý sân và
+          đơn đặt sân của bạn.
+        </p>
+        <Button className="mt-6" nativeButton={false} render={<Link href="/owner/setup" />}>
+          <Store /> Đăng ký trở thành chủ sân
         </Button>
       </div>
     )
