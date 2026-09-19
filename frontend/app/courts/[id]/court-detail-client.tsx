@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowLeft,
   CalendarDays,
@@ -75,27 +75,41 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    let active = true
+  /** Bỏ qua kết quả fetch nếu component đã unmount (đổi sân khác). */
+  const mounted = useRef(true)
+
+  useEffect(
+    () => () => {
+      mounted.current = false
+    },
+    []
+  )
+
+  /**
+   * Tách thành `load` để nút "Thử lại" gọi lại được đúng request —
+   * `router.refresh()` không chạy lại effect của client component.
+   */
+  const load = useCallback(() => {
     setLoading(true)
     setLoadError(null)
     api
       .court(id)
       .then(data => {
-        if (!active) return
+        if (!mounted.current) return
         setCourt(data)
         setDate(toDateInputValue(new Date()))
       })
       .catch(e => {
-        if (active) setLoadError(getErrorMessage(e))
+        if (mounted.current) setLoadError(getErrorMessage(e))
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (mounted.current) setLoading(false)
       })
-    return () => {
-      active = false
-    }
   }, [id])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const meta = courtTypeMeta(court?.type ?? '')
   const total = useMemo(() => {
@@ -182,7 +196,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
 
   if (loadError || !court) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
+      <div role="alert" className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
         <Store className="mx-auto size-12 text-muted-foreground" />
         <h1 className="mt-4 text-xl font-bold">Không tìm thấy sân thể thao</h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -192,7 +206,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
           <Button variant="outline" nativeButton={false} render={<Link href="/courts" />}>
             <ArrowLeft /> Về danh sách sân
           </Button>
-          <Button onClick={() => router.refresh()}>
+          <Button onClick={load}>
             <RefreshCw /> Thử lại
           </Button>
         </div>
@@ -208,6 +222,8 @@ export default function CourtDetailClient({ id }: { id: string }) {
         <img
           src={meta.image}
           alt=""
+          fetchPriority="high"
+          decoding="async"
           className="hero-photo absolute inset-0 size-full object-cover"
         />
         <div className={`absolute inset-0 ${meta.overlay}`} />
@@ -314,6 +330,8 @@ export default function CourtDetailClient({ id }: { id: string }) {
                       value={date}
                       onChange={e => setDate(e.target.value)}
                       required
+                      aria-invalid={Boolean(formError)}
+                      aria-describedby={formError ? 'booking-form-error' : undefined}
                     />
                   </div>
 
@@ -330,6 +348,8 @@ export default function CourtDetailClient({ id }: { id: string }) {
                         value={start}
                         onChange={e => setStart(e.target.value)}
                         required
+                        aria-invalid={Boolean(formError)}
+                        aria-describedby={formError ? 'booking-form-error' : undefined}
                       />
                     </div>
                     <div className="flex flex-col gap-2">
@@ -344,6 +364,8 @@ export default function CourtDetailClient({ id }: { id: string }) {
                         value={end}
                         onChange={e => setEnd(e.target.value)}
                         required
+                        aria-invalid={Boolean(formError)}
+                        aria-describedby={formError ? 'booking-form-error' : undefined}
                       />
                     </div>
                   </div>
@@ -392,7 +414,11 @@ export default function CourtDetailClient({ id }: { id: string }) {
                   </div>
 
                   {formError && (
-                    <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <p
+                      id="booking-form-error"
+                      role="alert"
+                      className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    >
                       {formError}
                     </p>
                   )}

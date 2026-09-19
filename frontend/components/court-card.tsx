@@ -28,6 +28,8 @@ export function CourtCard({
           <img
             src={meta.image}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.03]"
           />
           <div className={`absolute inset-0 ${meta.overlay}`} />

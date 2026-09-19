@@ -128,3 +128,12 @@
     animation: court-item-in 0.45s ease-out both;
   }
 }
+
+/* Tôn trọng người dùng đã bật "giảm chuyển động" ở hệ điều hành.
+   Rule nằm ngoài @layer nên thắng các khai báo trong @layer utilities. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo,
+  .court-list-item {
+    animation: none;
+  }
+}
