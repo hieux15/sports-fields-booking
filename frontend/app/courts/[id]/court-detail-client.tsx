@@ -75,40 +75,37 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  /** Bỏ qua kết quả fetch nếu component đã unmount (đổi sân khác). */
-  const mounted = useRef(true)
-
-  useEffect(
-    () => () => {
-      mounted.current = false
-    },
-    []
-  )
+  /** Bỏ qua kết quả của request cũ khi đổi sân hoặc React chạy lại effect. */
+  const requestVersion = useRef(0)
 
   /**
    * Tách thành `load` để nút "Thử lại" gọi lại được đúng request —
    * `router.refresh()` không chạy lại effect của client component.
    */
   const load = useCallback(() => {
+    const version = ++requestVersion.current
     setLoading(true)
     setLoadError(null)
     api
       .court(id)
       .then(data => {
-        if (!mounted.current) return
+        if (version !== requestVersion.current) return
         setCourt(data)
         setDate(toDateInputValue(new Date()))
       })
       .catch(e => {
-        if (mounted.current) setLoadError(getErrorMessage(e))
+        if (version === requestVersion.current) setLoadError(getErrorMessage(e))
       })
       .finally(() => {
-        if (mounted.current) setLoading(false)
+        if (version === requestVersion.current) setLoading(false)
       })
   }, [id])
 
   useEffect(() => {
     load()
+    return () => {
+      requestVersion.current += 1
+    }
   }, [load])
 
   const meta = courtTypeMeta(court?.type ?? '')

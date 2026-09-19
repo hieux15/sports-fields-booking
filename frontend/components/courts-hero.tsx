@@ -36,7 +36,7 @@ export function CourtsHero({
           Tìm sân gần bạn, đặt lịch nhanh.
         </h1>
         <p className="mt-2 max-w-md text-sm text-white/80 sm:text-base">
-          Futsal, cầu lông và sân phố — chọn giờ, xác nhận, chơi.
+          Bóng đá, cầu lông và sân phố — chọn giờ, xác nhận, chơi.
         </p>
 
         <div className="relative mt-8 max-w-xl">{search}</div>
