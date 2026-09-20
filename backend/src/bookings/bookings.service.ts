@@ -7,6 +7,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
+const MIN_BOOKING_MINUTES = 60;
+const MAX_BOOKING_MINUTES = 240;
+
 // Đổi giờ dạng "H:mm" hoặc "HH:mm" thành số phút kể từ 00:00, trả về null nếu sai định dạng
 function toMinutesOfDay(time: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
@@ -53,6 +56,15 @@ export class BookingsService {
     if (startTime >= endTime) {
       throw new BadRequestException(
         'Thời gian bắt đầu phải trước thời gian kết thúc',
+      );
+    }
+    const durationMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
+    if (
+      durationMinutes < MIN_BOOKING_MINUTES ||
+      durationMinutes > MAX_BOOKING_MINUTES
+    ) {
+      throw new BadRequestException(
+        `Thời lượng đặt sân phải từ ${MIN_BOOKING_MINUTES / 60} đến ${MAX_BOOKING_MINUTES / 60} giờ`,
       );
     }
     if (startTime < new Date()) {

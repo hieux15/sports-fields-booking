@@ -39,6 +39,53 @@ describe('CourtsService', () => {
     expect(service).toBeDefined();
   });
 
+  it('chặn giờ mở cửa không đứng trước giờ đóng cửa', async () => {
+    expect(() =>
+      service.create(
+        {
+          name: 'Sân A',
+          type: 'Bóng đá',
+          pricePerHour: 200000,
+          openTime: '22:00',
+          closeTime: '06:00',
+        },
+        'owner-1',
+      ),
+    ).toThrow(BadRequestException);
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  it('chặn giá sân ngoài khoảng hợp lý', async () => {
+    expect(() =>
+      service.create(
+        {
+          name: 'Sân A',
+          type: 'Bóng đá',
+          pricePerHour: 5000,
+          openTime: '06:00',
+          closeTime: '22:00',
+        },
+        'owner-1',
+      ),
+    ).toThrow(BadRequestException);
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  it('kiểm tra lại giờ và giá khi cập nhật sân', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      ownerId: 'owner-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+      pricePerHour: 200000,
+    });
+
+    await expect(
+      service.updateMyCourt('court-1', 'owner-1', { closeTime: '05:00' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.court.update).not.toHaveBeenCalled();
+  });
+
   it('báo lỗi khi sân không tồn tại', async () => {
     prisma.court.findUnique.mockResolvedValue(null);
 

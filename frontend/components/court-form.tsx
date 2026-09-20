@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+const MIN_COURT_PRICE = 10000
+const MAX_COURT_PRICE = 10000000
+
 const DEFAULT_VALUES: CourtInput = {
   name: '',
   type: COURT_TYPE_OPTIONS[0].label,
@@ -69,8 +72,12 @@ export function CourtForm({
       setError('Vui lòng chọn loại sân')
       return
     }
-    if (!Number.isFinite(values.pricePerHour) || values.pricePerHour < 0) {
-      setError('Giá thuê mỗi giờ không hợp lệ')
+    if (
+      !Number.isFinite(values.pricePerHour) ||
+      values.pricePerHour < MIN_COURT_PRICE ||
+      values.pricePerHour > MAX_COURT_PRICE
+    ) {
+      setError('Giá thuê mỗi giờ phải từ 10.000 đến 10.000.000 ₫')
       return
     }
     if (!values.openTime || !values.closeTime || values.openTime >= values.closeTime) {
@@ -150,7 +157,8 @@ export function CourtForm({
                 id="court-price"
                 className="h-11"
                 type="number"
-                min={0}
+                min={MIN_COURT_PRICE}
+                max={MAX_COURT_PRICE}
                 step={10000}
                 value={values.pricePerHour}
                 onChange={e => update('pricePerHour', Number(e.target.value))}

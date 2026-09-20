@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -23,7 +24,8 @@ export class CreateCourtDto {
   // HTML number inputs submit strings, so coerce before validating.
   @Type(() => Number)
   @IsNumber()
-  @Min(0)
+  @Min(10000)
+  @Max(10000000)
   pricePerHour!: number;
 
   @IsString()

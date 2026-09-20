@@ -35,7 +35,12 @@ const DURATIONS = [
   { label: '1 giờ', minutes: 60 },
   { label: '1,5 giờ', minutes: 90 },
   { label: '2 giờ', minutes: 120 },
+  { label: '3 giờ', minutes: 180 },
+  { label: '4 giờ', minutes: 240 },
 ]
+
+const MIN_BOOKING_MINUTES = 60
+const MAX_BOOKING_MINUTES = 240
 
 function pad(value: number) {
   return String(value).padStart(2, '0')
@@ -134,6 +139,11 @@ export default function CourtDetailClient({ id }: { id: string }) {
     }
     if (start >= end) {
       setFormError('Thời gian bắt đầu phải trước thời gian kết thúc')
+      return
+    }
+    const durationMinutes = (toMinutes(end) ?? 0) - (toMinutes(start) ?? 0)
+    if (durationMinutes < MIN_BOOKING_MINUTES || durationMinutes > MAX_BOOKING_MINUTES) {
+      setFormError('Thời lượng đặt sân phải từ 1 đến 4 giờ')
       return
     }
     const openMinutes = toMinutes(court.openTime)
@@ -345,7 +355,6 @@ export default function CourtDetailClient({ id }: { id: string }) {
                         type="time"
                         min={court.openTime}
                         max={court.closeTime}
-                        step={900}
                         value={start}
                         onChange={e => setStart(e.target.value)}
                         required
@@ -361,7 +370,6 @@ export default function CourtDetailClient({ id }: { id: string }) {
                         type="time"
                         min={court.openTime}
                         max={court.closeTime}
-                        step={900}
                         value={end}
                         onChange={e => setEnd(e.target.value)}
                         required

@@ -66,4 +66,44 @@ describe('BookingsService', () => {
     expect(result.startTime).toEqual(new Date('2027-01-15T13:00:00.000Z'));
     expect(result.endTime).toEqual(new Date('2027-01-15T14:00:00.000Z'));
   });
+
+  it('rejects bookings shorter than one hour', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+    });
+
+    await expect(
+      service.create(
+        {
+          courtId: 'court-1',
+          startTime: '2027-01-15T20:00:00+07:00',
+          endTime: '2027-01-15T20:45:00+07:00',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('Thời lượng đặt sân phải từ 1 đến 4 giờ');
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('rejects bookings longer than four hours', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+    });
+
+    await expect(
+      service.create(
+        {
+          courtId: 'court-1',
+          startTime: '2027-01-15T17:00:00+07:00',
+          endTime: '2027-01-15T22:00:00+07:00',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('Thời lượng đặt sân phải từ 1 đến 4 giờ');
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+  });
 });
