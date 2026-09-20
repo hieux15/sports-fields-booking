@@ -69,16 +69,19 @@ export default function CourtsPage() {
       {/* First viewport: brand · headline · line · search · full-bleed photo */}
       <CourtsHero
         search={
-          <>
-            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div
+            role="search"
+            className="group relative max-w-xl rounded-full border border-white/75 bg-background/90 p-1 shadow-[0_10px_26px_rgba(0,0,0,0.16)] backdrop-blur-md transition-colors focus-within:border-primary/70 focus-within:bg-background"
+          >
+            <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-primary transition-transform group-focus-within:scale-110" />
             <Input
               value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Tìm theo tên sân, địa chỉ, loại sân..."
-              className="h-12 border-0 bg-white pl-11 text-foreground shadow-none placeholder:text-muted-foreground"
-              aria-label="Tìm sân"
+              onChange={event => setQuery(event.target.value)}
+              placeholder="Tìm sân hoặc khu vực..."
+              className="h-12 rounded-full border-0 bg-transparent pl-11 pr-5 text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
+              aria-label="Tìm sân hoặc khu vực"
             />
-          </>
+          </div>
         }
       />
 

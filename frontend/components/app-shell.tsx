@@ -47,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const [showMock, setShowMock] = useState(true)
   const items = user?.role === 'OWNER' ? OWNER_NAV : CUSTOMER_NAV
+  const isAuthPage = path === '/login' || path === '/register'
 
   const nav = (
     <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-6">
@@ -58,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href={item.href}
             className={`border-l-2 px-3 py-2 text-sm transition-colors md:border-l-0 md:border-b-2 md:px-0 md:py-1 ${
               active
-                ? 'border-primary font-medium text-foreground'
+                ? 'border-primary bg-primary/5 font-semibold text-foreground md:bg-transparent'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -71,11 +72,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-sm">
+      <header
+        className={`sticky top-0 z-40 border-b border-border/80 ${
+          isAuthPage ? 'bg-background' : 'bg-background/85 backdrop-blur-sm'
+        }`}
+      >
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link
             href={user?.role === 'OWNER' ? '/owner' : '/courts'}
-            className="font-display text-2xl font-extrabold uppercase tracking-[0.06em] text-foreground sm:text-[1.65rem]"
+            className="font-display text-[1.45rem] font-extrabold uppercase tracking-[0.04em] text-foreground sm:text-[1.55rem]"
           >
             Sân Việt
           </Link>
@@ -163,11 +168,63 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t border-border/80">
-        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
-          <p className="font-display text-sm font-bold uppercase tracking-[0.08em] text-muted-foreground">
-            Sân Việt
-          </p>
+      <footer className="border-t border-border/80 bg-secondary/35">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-10 sm:grid-cols-[1.2fr_.8fr] sm:px-6 lg:grid-cols-[1.4fr_1fr_1.2fr_.8fr] lg:gap-8">
+          <div className="max-w-xs">
+            <Link
+              href="/courts"
+              className="font-display text-2xl font-extrabold uppercase tracking-[0.04em] text-foreground"
+            >
+              Sân Việt
+            </Link>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Tìm sân phù hợp, chọn giờ chơi và đặt lịch dễ dàng.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-foreground">Khám phá</p>
+            <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm text-muted-foreground">
+              <Link className="transition-colors hover:text-foreground" href="/courts">
+                Tìm sân
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/bookings">
+                Đơn đặt sân
+              </Link>
+            </nav>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-foreground">Chủ sân</p>
+            <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm text-muted-foreground">
+              <Link className="transition-colors hover:text-foreground" href="/owner/setup">
+                Đăng ký làm chủ sân
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/owner">
+                Quản lý sân
+              </Link>
+            </nav>
+          </div>
+
+          <div className="sm:justify-self-end">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-foreground">Tài khoản</p>
+            <nav className="mt-4 flex flex-col items-start gap-2.5 text-sm text-muted-foreground">
+              <Link className="transition-colors hover:text-foreground" href="/login">
+                Đăng nhập
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/register">
+                Tạo tài khoản
+              </Link>
+              <Link className="transition-colors hover:text-foreground" href="/profile">
+                Hồ sơ cá nhân
+              </Link>
+            </nav>
+          </div>
+
+          <div className="border-t border-border/80 pt-5 text-xs text-muted-foreground sm:col-span-2 lg:col-span-4 lg:flex lg:items-center lg:justify-between">
+            <p>© 2026 Sân Việt</p>
+            <p className="mt-1 lg:mt-0">Đặt sân thể thao đơn giản hơn mỗi ngày.</p>
+          </div>
         </div>
       </footer>
     </div>

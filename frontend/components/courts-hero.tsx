@@ -5,7 +5,7 @@
 
 /** Hero photo — urban futsal / street court atmosphere. */
 export const COURTS_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1800&q=80'
+  'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1800&q=85'
 
 export function CourtsHero({
   search,
@@ -29,11 +29,11 @@ export function CourtsHero({
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/50 to-black/35" />
 
       <div className="relative mx-auto flex min-h-[min(72vh,560px)] max-w-7xl flex-col justify-end px-4 pb-12 pt-20 sm:px-6 sm:pb-16">
-        <p className="font-display text-5xl font-extrabold uppercase tracking-[0.08em] sm:text-6xl md:text-7xl">
-          Sân Việt
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/75 sm:text-sm">
+          Sân thể thao gần bạn
         </p>
-        <h1 className="mt-3 max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">
-          Tìm sân gần bạn, đặt lịch nhanh.
+        <h1 className="mt-0 max-w-xl text-2xl font-bold tracking-tight sm:text-3xl">
+          Tìm sân đúng gu, đặt lịch đúng giờ.
         </h1>
         <p className="mt-2 max-w-md text-sm text-white/80 sm:text-base">
           Bóng đá, cầu lông và sân phố — chọn giờ, xác nhận, chơi.
