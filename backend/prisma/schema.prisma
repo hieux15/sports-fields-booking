@@ -43,7 +43,6 @@ model Booking {
   startTime DateTime
   endTime   DateTime
   status    BookingStatus @default(PENDING)
-  isPaid    Boolean       @default(false)
   createdAt DateTime      @default(now())
 
   @@index([courtId, startTime, endTime])

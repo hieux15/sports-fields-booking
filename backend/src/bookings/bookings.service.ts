@@ -95,7 +95,6 @@ export class BookingsService {
         startTime: startTime,
         endTime: endTime,
         status: 'PENDING',
-        isPaid: false,
       },
     });
     return booking;
