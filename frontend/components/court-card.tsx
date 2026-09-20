@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
-import { courtTypeMeta } from '@/lib/court-type'
+import { COURT_FALLBACK_IMAGE, courtTypeMeta } from '@/lib/court-type'
 import { formatVND } from '@/lib/format'
 import type { Court } from '@/lib/types'
 
@@ -27,6 +27,10 @@ export function CourtCard({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={meta.image}
+            onError={(event) => {
+              event.currentTarget.onerror = null
+              event.currentTarget.src = COURT_FALLBACK_IMAGE
+            }}
             alt=""
             loading="lazy"
             decoding="async"

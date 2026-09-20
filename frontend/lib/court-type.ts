@@ -19,6 +19,8 @@ export type CourtTypeMeta = {
   overlay: string
 }
 
+export const COURT_FALLBACK_IMAGE = '/court-fallback.svg'
+
 const META: Record<CourtTypeKey, Omit<CourtTypeMeta, 'key'>> = {
   FOOTBALL: {
     label: 'Bóng đá',

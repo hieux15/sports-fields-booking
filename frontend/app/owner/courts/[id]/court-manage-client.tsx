@@ -174,7 +174,7 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
         <div className="flex items-center gap-4">
           <span
             className="relative flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-cover bg-center text-white"
-            style={{ backgroundImage: `url(${meta.image})` }}
+            style={{ backgroundImage: `url("${meta.image}"), url("/court-fallback.svg")` }}
           >
             <span className={`absolute inset-0 ${meta.overlay}`} />
             <Icon className="relative size-7" />

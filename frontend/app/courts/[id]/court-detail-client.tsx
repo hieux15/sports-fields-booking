@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
-import { courtTypeMeta } from '@/lib/court-type'
+import { COURT_FALLBACK_IMAGE, courtTypeMeta } from '@/lib/court-type'
 import { formatVND, hoursBetween } from '@/lib/format'
 import type { CourtDetail } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
@@ -218,6 +218,10 @@ export default function CourtDetailClient({ id }: { id: string }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={meta.image}
+          onError={(event) => {
+            event.currentTarget.onerror = null
+            event.currentTarget.src = COURT_FALLBACK_IMAGE
+          }}
           alt=""
           fetchPriority="high"
           decoding="async"

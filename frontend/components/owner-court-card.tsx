@@ -56,7 +56,7 @@ export function OwnerCourtCard({
         <div className="flex items-start gap-3">
           <div
             className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cover bg-center text-white"
-            style={{ backgroundImage: `url(${meta.image})` }}
+            style={{ backgroundImage: `url("${meta.image}"), url("/court-fallback.svg")` }}
           >
             <div className={`absolute inset-0 ${meta.overlay}`} />
             <Icon className="relative size-6" />
