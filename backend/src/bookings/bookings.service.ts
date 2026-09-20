@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
@@ -32,8 +33,14 @@ function getVietnamMinutes(date: Date): number {
     second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return Number(values.hour) * 60 + Number(values.minute) + Number(values.second) / 60;
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  return (
+    Number(values.hour) * 60 +
+    Number(values.minute) +
+    Number(values.second) / 60
+  );
 }
 
 @Injectable()
@@ -106,16 +113,50 @@ export class BookingsService {
       );
     }
     // tạo booking
-    const booking = await this.prisma.booking.create({
-      data: {
-        courtId: dto.courtId,
-        userId: userId,
-        startTime: startTime,
-        endTime: endTime,
-        status: 'PENDING',
-      },
-    });
-    return booking;
+    try {
+      const booking = await this.prisma.booking.create({
+        data: {
+          courtId: dto.courtId,
+          userId: userId,
+          startTime: startTime,
+          endTime: endTime,
+          status: 'PENDING',
+        },
+      });
+      return booking;
+    } catch (error) {
+      const prismaError =
+        error as Partial<Prisma.PrismaClientKnownRequestError> & {
+          code?: string;
+          message?: string;
+          meta?: { target?: unknown[] };
+        };
+      const message = (prismaError.message ?? '').toLowerCase();
+      const overlapMessage =
+        message.includes('booking_no_overlap') ||
+        message.includes('exclude') ||
+        message.includes('overlap') ||
+        message.includes('conflict');
+      const metaTarget = Array.isArray(prismaError.meta?.target)
+        ? prismaError.meta.target
+        : [];
+      const targetMatches = metaTarget.some(
+        (target) =>
+          typeof target === 'string' &&
+          ['courtId', 'startTime', 'endTime'].includes(target),
+      );
+      const isConstraintViolation =
+        prismaError.code === 'P2002' ||
+        prismaError.code === 'P2004' ||
+        targetMatches;
+
+      if (isConstraintViolation || overlapMessage) {
+        throw new ConflictException(
+          'Sân đã có đơn đặt trong khoảng thời gian này',
+        );
+      }
+      throw error;
+    }
   }
   // Lấy danh sách tất cả booking của chính user đang đăng nhập
   async findAll(userId: string) {

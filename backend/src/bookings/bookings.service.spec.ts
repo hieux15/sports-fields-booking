@@ -1,4 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
+import { ConflictException } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -52,7 +54,7 @@ describe('BookingsService', () => {
       closeTime: '22:00',
     });
     prisma.booking.findFirst.mockResolvedValue(null);
-    prisma.booking.create.mockImplementation(async ({ data }) => data);
+    prisma.booking.create.mockImplementation(({ data }) => data);
 
     const result = await service.create(
       {
@@ -105,5 +107,145 @@ describe('BookingsService', () => {
       ),
     ).rejects.toThrow('Thời lượng đặt sân phải từ 1 đến 4 giờ');
     expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('maps database overlap violations to conflict errors', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+    });
+    prisma.booking.findFirst.mockResolvedValue(null);
+    prisma.booking.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`courtId`,`startTime`,`endTime`)',
+        {
+          code: 'P2004',
+          clientVersion: 'test',
+          meta: { target: ['courtId'] },
+        },
+      ),
+    );
+
+    await expect(
+      service.create(
+        {
+          courtId: 'court-1',
+          startTime: '2027-01-15T20:00:00+07:00',
+          endTime: '2027-01-15T21:00:00+07:00',
+        },
+        'user-1',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+});
+
+describe('BookingsService integration', () => {
+  let prisma: PrismaService;
+  let service: BookingsService;
+  let courtId: string;
+  let ownerId: string;
+  let userId: string;
+
+  beforeAll(async () => {
+    prisma = new PrismaService();
+    await prisma.$connect();
+
+    const owner = await prisma.user.create({
+      data: {
+        email: `owner-${Date.now()}@example.com`,
+        password: 'secret',
+        name: 'Owner',
+        phone: '0900000001',
+        role: 'OWNER',
+      },
+    });
+
+    const user = await prisma.user.create({
+      data: {
+        email: `customer-${Date.now()}@example.com`,
+        password: 'secret',
+        name: 'Customer',
+        phone: '0900000002',
+        role: 'CUSTOMER',
+      },
+    });
+
+    const court = await prisma.court.create({
+      data: {
+        name: 'Sân test concurrent',
+        type: 'BADMINTON',
+        address: 'Test address',
+        pricePerHour: 150000,
+        openTime: '06:00',
+        closeTime: '22:00',
+        ownerId: owner.id,
+      },
+    });
+
+    ownerId = owner.id;
+    userId = user.id;
+    courtId = court.id;
+
+    service = new BookingsService(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.booking.deleteMany({
+      where: { courtId },
+    });
+    await prisma.court.delete({
+      where: { id: courtId },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [ownerId, userId] } },
+    });
+    await prisma.$disconnect();
+  });
+
+  it('rejects two concurrent booking attempts for the same time slot', async () => {
+    const startTime = new Date('2030-01-15T10:00:00+07:00');
+    const endTime = new Date('2030-01-15T11:00:00+07:00');
+
+    const firstAttempt = service.create(
+      {
+        courtId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      },
+      userId,
+    );
+
+    const secondAttempt = service.create(
+      {
+        courtId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      },
+      userId,
+    );
+
+    const results = await Promise.allSettled([firstAttempt, secondAttempt]);
+    const fulfilled = results.filter(
+      (result): result is PromiseFulfilledResult<unknown> =>
+        result.status === 'fulfilled',
+    );
+    const rejected = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toBeInstanceOf(ConflictException);
+
+    const savedBookings = await prisma.booking.count({
+      where: {
+        courtId,
+        startTime,
+        endTime,
+      },
+    });
+
+    expect(savedBookings).toBe(1);
   });
 });
