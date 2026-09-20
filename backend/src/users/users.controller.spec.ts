@@ -14,6 +14,7 @@ describe('UsersController', () => {
   const usersService = {
     findMe: jest.fn(),
     updateMe: jest.fn(),
+    becomeOwner: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -43,5 +44,20 @@ describe('UsersController', () => {
     await controller.updateMe(buildRequest('user-1'), dto);
 
     expect(usersService.updateMe).toHaveBeenCalledWith('user-1', dto);
+  });
+
+  it('ủy quyền đăng ký chủ sân cho service với id người dùng', async () => {
+    const dto = {
+      name: 'Green Field 03',
+      type: 'Bóng đá',
+      address: '12 Lê Lợi, Hà Nội',
+      pricePerHour: 150000,
+      openTime: '06:00',
+      closeTime: '22:00',
+    };
+
+    await controller.becomeOwner(buildRequest('user-1'), dto);
+
+    expect(usersService.becomeOwner).toHaveBeenCalledWith('user-1', dto);
   });
 });

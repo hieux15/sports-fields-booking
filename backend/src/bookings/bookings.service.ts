@@ -21,6 +21,18 @@ function toMinutesOfDay(time: string): number | null {
   return hours * 60 + minutes;
 }
 
+function getVietnamMinutes(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return Number(values.hour) * 60 + Number(values.minute) + Number(values.second) / 60;
+}
+
 @Injectable()
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
@@ -54,14 +66,8 @@ export class BookingsService {
     if (openMinutes === null || closeMinutes === null) {
       throw new BadRequestException('Giờ mở cửa/kết thúc của sân không hợp lệ');
     }
-    const bookingStartMinutes =
-      startTime.getHours() * 60 +
-      startTime.getMinutes() +
-      startTime.getSeconds() / 60;
-    const bookingEndMinutes =
-      endTime.getHours() * 60 +
-      endTime.getMinutes() +
-      endTime.getSeconds() / 60;
+    const bookingStartMinutes = getVietnamMinutes(startTime);
+    const bookingEndMinutes = getVietnamMinutes(endTime);
     if (bookingStartMinutes < openMinutes || bookingEndMinutes > closeMinutes) {
       throw new BadRequestException(
         `Thời gian đặt sân không hợp lệ. Sân hoạt động từ ${court.openTime} đến ${court.closeTime}`,

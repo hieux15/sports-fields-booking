@@ -15,7 +15,13 @@ import {
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { COURT_FALLBACK_IMAGE, courtTypeMeta } from '@/lib/court-type'
-import { formatVND, hoursBetween } from '@/lib/format'
+import {
+  formatVND,
+  hoursBetween,
+  vietnamDateInputValue,
+  vietnamLocalIso,
+  vietnamTimeValue,
+} from '@/lib/format'
 import type { CourtDetail } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -33,11 +39,6 @@ const DURATIONS = [
 
 function pad(value: number) {
   return String(value).padStart(2, '0')
-}
-
-/** Định dạng ngày theo giờ địa phương cho input type="date". */
-function toDateInputValue(date: Date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function toMinutes(time: string) {
@@ -59,8 +60,7 @@ function roundToStep(time: string, step = 15) {
 }
 
 function nowTimeRounded() {
-  const now = new Date()
-  return roundToStep(`${pad(now.getHours())}:${pad(now.getMinutes())}`)
+  return roundToStep(vietnamTimeValue())
 }
 
 export default function CourtDetailClient({ id }: { id: string }) {
@@ -91,7 +91,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
       .then(data => {
         if (version !== requestVersion.current) return
         setCourt(data)
-        setDate(toDateInputValue(new Date()))
+        setDate(vietnamDateInputValue())
       })
       .catch(e => {
         if (version === requestVersion.current) setLoadError(getErrorMessage(e))
@@ -111,16 +111,16 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const meta = courtTypeMeta(court?.type ?? '')
   const total = useMemo(() => {
     if (!court || !date || !start || !end || start >= end) return 0
-    const startIso = new Date(`${date}T${start}`).toISOString()
-    const endIso = new Date(`${date}T${end}`).toISOString()
+    const startIso = vietnamLocalIso(date, start)
+    const endIso = vietnamLocalIso(date, end)
     return hoursBetween(startIso, endIso) * Number(court.pricePerHour)
   }, [court, date, start, end])
 
   const duration = useMemo(() => {
     if (start >= end) return 0
     return hoursBetween(
-      new Date(`2000-01-01T${start}`).toISOString(),
-      new Date(`2000-01-01T${end}`).toISOString()
+      vietnamLocalIso('2000-01-01', start),
+      vietnamLocalIso('2000-01-01', end)
     )
   }, [start, end])
 
@@ -153,7 +153,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
       setFormError(`Sân hoạt động từ ${court.openTime} đến ${court.closeTime}`)
       return
     }
-    const startIso = new Date(`${date}T${start}`).toISOString()
+    const startIso = vietnamLocalIso(date, start)
     if (new Date(startIso).getTime() <= Date.now()) {
       setFormError('Thời gian bắt đầu phải sau thời gian hiện tại')
       return
@@ -163,7 +163,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
       await api.createBooking({
         courtId: id,
         startTime: startIso,
-        endTime: new Date(`${date}T${end}`).toISOString(),
+        endTime: vietnamLocalIso(date, end),
       })
       toast.success('Đặt sân thành công, vui lòng chờ chủ sân xác nhận')
       router.push('/bookings')
@@ -323,11 +323,11 @@ export default function CourtDetailClient({ id }: { id: string }) {
                 <form onSubmit={submit} className="flex flex-col gap-5">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="booking-date">Ngày chơi</Label>
-                    <Input
-                      id="booking-date"
-                      className="h-11"
-                      type="date"
-                      min={toDateInputValue(new Date())}
+                      <Input
+                        id="booking-date"
+                        className="h-11"
+                        type="date"
+                        min={vietnamDateInputValue()}
                       value={date}
                       onChange={e => setDate(e.target.value)}
                       required
