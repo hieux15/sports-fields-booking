@@ -13,7 +13,9 @@ const MAX_PRICE_PER_HOUR = 10000000;
 
 function validateCourtSchedule(openTime: string, closeTime: string) {
   if (!TIME_PATTERN.test(openTime) || !TIME_PATTERN.test(closeTime)) {
-    throw new BadRequestException('Giờ mở cửa và giờ đóng cửa phải có định dạng HH:mm');
+    throw new BadRequestException(
+      'Giờ mở cửa và giờ đóng cửa phải có định dạng HH:mm',
+    );
   }
   if (openTime >= closeTime) {
     throw new BadRequestException('Giờ mở cửa phải trước giờ đóng cửa');
@@ -98,7 +100,10 @@ export class CourtsService {
       );
     }
 
-    validateCourtSchedule(dto.openTime ?? court.openTime, dto.closeTime ?? court.closeTime);
+    validateCourtSchedule(
+      dto.openTime ?? court.openTime,
+      dto.closeTime ?? court.closeTime,
+    );
     validateCourtPrice(dto.pricePerHour ?? Number(court.pricePerHour));
 
     return this.prisma.court.update({

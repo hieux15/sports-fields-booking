@@ -14,7 +14,8 @@ sports-fields-booking/
 ## Prerequisites
 
 - Node.js >= 20.9.0 (Next.js 16 requirement; developed on Node 22)
-- A PostgreSQL database (the seed config targets a Supabase pooler)
+- A PostgreSQL database (the seed config targets a Supabase pooler) whose role
+  can run `CREATE EXTENSION btree_gist` (used by the booking overlap guard)
 
 ## Backend
 
@@ -87,6 +88,60 @@ Notes for API consumers:
   `status` is not `CANCELLED` (`message` reports how many are left). When it
   succeeds it first deletes the `CANCELLED` bookings of that court in the same
   transaction, which keeps the `Booking.courtId` foreign key valid.
+- `POST /bookings` answers `409` when the court already has a booking whose
+  `status` is not `CANCELLED` and whose `[startTime, endTime)` overlaps the
+  requested range. The same rule is enforced by a database constraint, so two
+  simultaneous requests cannot both succeed (see the note below).
+
+### Booking overlap guard (database constraints)
+
+`POST /bookings` is protected twice: the service pre-checks and returns a
+friendly `409`, and PostgreSQL enforces the invariant so that any other writer
+(another instance, a script, a manual query) cannot create the same overlap.
+
+| Object | Definition / purpose |
+| --- | --- |
+| `btree_gist` | extension created by the migration, required by the exclusion constraint |
+| `booking_no_overlap` | `EXCLUDE USING gist ("courtId" WITH =, tsrange("startTime", "endTime", '[)') WITH &&) WHERE ("status" <> 'CANCELLED')` |
+| `booking_time_range_valid` | `CHECK ("startTime" < "endTime")` |
+
+Prerequisites and behaviour to keep in mind:
+
+- `npx prisma migrate deploy` needs a role that is allowed to run
+  `CREATE EXTENSION IF NOT EXISTS btree_gist`.
+- The migrations fail (and change nothing) if the data already violates the new
+  constraints, so overlapping bookings that are not `CANCELLED` (and rows with
+  `startTime >= endTime`) must be fixed before deploying.
+- Ranges are half-open `[startTime, endTime)`, so back-to-back bookings such as
+  10:00-11:00 and 11:00-12:00 are both valid.
+- `CANCELLED` bookings are ignored by the constraint, so a cancelled slot can be
+  booked again.
+- Prisma cannot express `EXCLUDE` in `schema.prisma`, therefore the constraints
+  live in the raw SQL migrations and `prisma migrate diff` reports no drift.
+- `npm run test:e2e` includes `test/bookings.e2e-spec.ts`, which runs against the
+  configured database and asserts one `201` plus one `409` for two concurrent
+  requests; it loads `backend/.env` through `setupFiles` and cleans up its own
+  data.
+
+#### Pre-deploy data check (legacy databases)
+
+A database created from these migrations already satisfies the constraints, so this
+check is only needed when the data predates them - for example when a dump of the
+old database is restored. Run both queries before `prisma migrate deploy`: the
+migrations fail (and change nothing) while violating rows remain.
+
+```sql
+-- Bookings that are not cancelled and overlap another booking on the same court
+SELECT a."id", b."id", a."courtId", a."status", b."status"
+FROM "Booking" a
+JOIN "Booking" b
+  ON a."courtId" = b."courtId" AND a."id" < b."id"
+ AND tsrange(a."startTime", a."endTime", '[)') && tsrange(b."startTime", b."endTime", '[)')
+WHERE a."status" <> 'CANCELLED' AND b."status" <> 'CANCELLED';
+
+-- Invalid ranges
+SELECT "id" FROM "Booking" WHERE "startTime" >= "endTime";
+```
 
 ## Frontend
 

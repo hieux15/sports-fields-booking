@@ -1,8 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Prisma } from '@prisma/client';
 import { ConflictException } from '@nestjs/common';
+import { Booking, Prisma } from '@prisma/client';
 import { BookingsService } from './bookings.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+// Message thật khi vi phạm ràng buộc loại trừ: PostgreSQL trả SQLSTATE 23P01 và Prisma 6 bọc lại
+// thành PrismaClientUnknownRequestError (không có code/meta), nên service chỉ có thể nhận diện
+// qua tên constraint hoặc mã lỗi trong message.
+const OVERLAP_DATABASE_ERROR_MESSAGE =
+  'Error occurred during query execution: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "23P01", message: "conflicting key value violates exclusion constraint \\"booking_no_overlap\\"", severity: "ERROR" }) })';
+
+const UNRELATED_DATABASE_ERROR_MESSAGE =
+  'Error occurred during query execution: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "40P01", message: "deadlock detected", severity: "ERROR" }) })';
+
+const unknownRequestError = (message: string) =>
+  new Prisma.PrismaClientUnknownRequestError(message, {
+    clientVersion: 'test',
+  });
 
 describe('BookingsService', () => {
   let service: BookingsService;
@@ -18,6 +32,24 @@ describe('BookingsService', () => {
       findUnique: jest.Mock;
     };
   };
+
+  const court = {
+    id: 'court-1',
+    openTime: '06:00',
+    closeTime: '22:00',
+  };
+
+  const validBooking = {
+    courtId: 'court-1',
+    startTime: '2027-01-15T20:00:00+07:00',
+    endTime: '2027-01-15T21:00:00+07:00',
+  };
+
+  // Trả về đúng dữ liệu service truyền xuống Prisma để test luồng tạo booking thành công.
+  const echoCreatedBooking = () =>
+    prisma.booking.create.mockImplementation(({ data }) =>
+      Promise.resolve(data as Booking),
+    );
 
   beforeEach(async () => {
     prisma = {
@@ -48,33 +80,34 @@ describe('BookingsService', () => {
   });
 
   it('checks opening hours in Vietnam time regardless of server timezone', async () => {
-    prisma.court.findUnique.mockResolvedValue({
-      id: 'court-1',
-      openTime: '06:00',
-      closeTime: '22:00',
-    });
+    prisma.court.findUnique.mockResolvedValue(court);
     prisma.booking.findFirst.mockResolvedValue(null);
-    prisma.booking.create.mockImplementation(({ data }) => data);
+    echoCreatedBooking();
 
-    const result = await service.create(
-      {
-        courtId: 'court-1',
-        startTime: '2027-01-15T20:00:00+07:00',
-        endTime: '2027-01-15T21:00:00+07:00',
-      },
-      'user-1',
-    );
+    const result = await service.create(validBooking, 'user-1');
 
     expect(result.startTime).toEqual(new Date('2027-01-15T13:00:00.000Z'));
     expect(result.endTime).toEqual(new Date('2027-01-15T14:00:00.000Z'));
   });
 
+  it('rejects bookings outside the court opening hours', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+
+    await expect(
+      service.create(
+        {
+          courtId: 'court-1',
+          startTime: '2027-01-15T05:00:00+07:00',
+          endTime: '2027-01-15T06:00:00+07:00',
+        },
+        'user-1',
+      ),
+    ).rejects.toThrow('Sân hoạt động từ 06:00 đến 22:00');
+    expect(prisma.booking.findFirst).not.toHaveBeenCalled();
+  });
+
   it('rejects bookings shorter than one hour', async () => {
-    prisma.court.findUnique.mockResolvedValue({
-      id: 'court-1',
-      openTime: '06:00',
-      closeTime: '22:00',
-    });
+    prisma.court.findUnique.mockResolvedValue(court);
 
     await expect(
       service.create(
@@ -90,11 +123,7 @@ describe('BookingsService', () => {
   });
 
   it('rejects bookings longer than four hours', async () => {
-    prisma.court.findUnique.mockResolvedValue({
-      id: 'court-1',
-      openTime: '06:00',
-      closeTime: '22:00',
-    });
+    prisma.court.findUnique.mockResolvedValue(court);
 
     await expect(
       service.create(
@@ -109,143 +138,55 @@ describe('BookingsService', () => {
     expect(prisma.booking.findFirst).not.toHaveBeenCalled();
   });
 
-  it('maps database overlap violations to conflict errors', async () => {
-    prisma.court.findUnique.mockResolvedValue({
-      id: 'court-1',
-      openTime: '06:00',
-      closeTime: '22:00',
+  it('ignores cancelled bookings and only treats half-open overlaps as conflicts', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    echoCreatedBooking();
+
+    await service.create(validBooking, 'user-1');
+
+    // status <> CANCELLED: đơn đã hủy không chặn đơn mới.
+    // startTime < endTime mới và endTime > startTime mới: khung giờ liền kề vẫn hợp lệ.
+    expect(prisma.booking.findFirst).toHaveBeenCalledWith({
+      where: {
+        courtId: 'court-1',
+        status: { not: 'CANCELLED' },
+        startTime: { lt: new Date('2027-01-15T14:00:00.000Z') },
+        endTime: { gt: new Date('2027-01-15T13:00:00.000Z') },
+      },
     });
+  });
+
+  it('rejects bookings overlapping an active booking found by the pre-check', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+    prisma.booking.findFirst.mockResolvedValue({ id: 'booking-1' });
+
+    await expect(service.create(validBooking, 'user-1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('maps database exclusion violations to conflict errors', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
     prisma.booking.findFirst.mockResolvedValue(null);
     prisma.booking.create.mockRejectedValue(
-      new Prisma.PrismaClientKnownRequestError(
-        'Unique constraint failed on the fields: (`courtId`,`startTime`,`endTime`)',
-        {
-          code: 'P2004',
-          clientVersion: 'test',
-          meta: { target: ['courtId'] },
-        },
-      ),
+      unknownRequestError(OVERLAP_DATABASE_ERROR_MESSAGE),
     );
 
-    await expect(
-      service.create(
-        {
-          courtId: 'court-1',
-          startTime: '2027-01-15T20:00:00+07:00',
-          endTime: '2027-01-15T21:00:00+07:00',
-        },
-        'user-1',
-      ),
-    ).rejects.toBeInstanceOf(ConflictException);
-  });
-});
-
-describe('BookingsService integration', () => {
-  let prisma: PrismaService;
-  let service: BookingsService;
-  let courtId: string;
-  let ownerId: string;
-  let userId: string;
-
-  beforeAll(async () => {
-    prisma = new PrismaService();
-    await prisma.$connect();
-
-    const owner = await prisma.user.create({
-      data: {
-        email: `owner-${Date.now()}@example.com`,
-        password: 'secret',
-        name: 'Owner',
-        phone: '0900000001',
-        role: 'OWNER',
-      },
-    });
-
-    const user = await prisma.user.create({
-      data: {
-        email: `customer-${Date.now()}@example.com`,
-        password: 'secret',
-        name: 'Customer',
-        phone: '0900000002',
-        role: 'CUSTOMER',
-      },
-    });
-
-    const court = await prisma.court.create({
-      data: {
-        name: 'Sân test concurrent',
-        type: 'BADMINTON',
-        address: 'Test address',
-        pricePerHour: 150000,
-        openTime: '06:00',
-        closeTime: '22:00',
-        ownerId: owner.id,
-      },
-    });
-
-    ownerId = owner.id;
-    userId = user.id;
-    courtId = court.id;
-
-    service = new BookingsService(prisma);
+    await expect(service.create(validBooking, 'user-1')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 
-  afterAll(async () => {
-    await prisma.booking.deleteMany({
-      where: { courtId },
-    });
-    await prisma.court.delete({
-      where: { id: courtId },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: [ownerId, userId] } },
-    });
-    await prisma.$disconnect();
-  });
+  it('rethrows unrelated database errors instead of reporting a conflict', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    const databaseError = unknownRequestError(UNRELATED_DATABASE_ERROR_MESSAGE);
+    prisma.booking.create.mockRejectedValue(databaseError);
 
-  it('rejects two concurrent booking attempts for the same time slot', async () => {
-    const startTime = new Date('2030-01-15T10:00:00+07:00');
-    const endTime = new Date('2030-01-15T11:00:00+07:00');
-
-    const firstAttempt = service.create(
-      {
-        courtId,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      },
-      userId,
+    await expect(service.create(validBooking, 'user-1')).rejects.toBe(
+      databaseError,
     );
-
-    const secondAttempt = service.create(
-      {
-        courtId,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-      },
-      userId,
-    );
-
-    const results = await Promise.allSettled([firstAttempt, secondAttempt]);
-    const fulfilled = results.filter(
-      (result): result is PromiseFulfilledResult<unknown> =>
-        result.status === 'fulfilled',
-    );
-    const rejected = results.filter(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
-    );
-
-    expect(fulfilled).toHaveLength(1);
-    expect(rejected).toHaveLength(1);
-    expect(rejected[0].reason).toBeInstanceOf(ConflictException);
-
-    const savedBookings = await prisma.booking.count({
-      where: {
-        courtId,
-        startTime,
-        endTime,
-      },
-    });
-
-    expect(savedBookings).toBe(1);
   });
 });

@@ -4,12 +4,37 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 const MIN_BOOKING_MINUTES = 60;
 const MAX_BOOKING_MINUTES = 240;
+// Tên ràng buộc loại trừ chống trùng giờ.
+const OVERLAP_CONSTRAINT_NAME = 'booking_no_overlap';
+// SQLSTATE 23P01 = exclusion_violation của PostgreSQL.
+const EXCLUSION_VIOLATION_SQLSTATE = '23p01';
+
+function readErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const { message } = error as { message?: unknown };
+    return typeof message === 'string' ? message : '';
+  }
+  return '';
+}
+
+function isBookingOverlapViolation(error: unknown): boolean {
+  const message = readErrorMessage(error).toLowerCase();
+  return (
+    message.includes(OVERLAP_CONSTRAINT_NAME) ||
+    message.includes(EXCLUSION_VIOLATION_SQLSTATE)
+  );
+}
 
 // Đổi giờ dạng "H:mm" hoặc "HH:mm" thành số phút kể từ 00:00, trả về null nếu sai định dạng
 function toMinutesOfDay(time: string): number | null {
@@ -125,32 +150,7 @@ export class BookingsService {
       });
       return booking;
     } catch (error) {
-      const prismaError =
-        error as Partial<Prisma.PrismaClientKnownRequestError> & {
-          code?: string;
-          message?: string;
-          meta?: { target?: unknown[] };
-        };
-      const message = (prismaError.message ?? '').toLowerCase();
-      const overlapMessage =
-        message.includes('booking_no_overlap') ||
-        message.includes('exclude') ||
-        message.includes('overlap') ||
-        message.includes('conflict');
-      const metaTarget = Array.isArray(prismaError.meta?.target)
-        ? prismaError.meta.target
-        : [];
-      const targetMatches = metaTarget.some(
-        (target) =>
-          typeof target === 'string' &&
-          ['courtId', 'startTime', 'endTime'].includes(target),
-      );
-      const isConstraintViolation =
-        prismaError.code === 'P2002' ||
-        prismaError.code === 'P2004' ||
-        targetMatches;
-
-      if (isConstraintViolation || overlapMessage) {
+      if (isBookingOverlapViolation(error)) {
         throw new ConflictException(
           'Sân đã có đơn đặt trong khoảng thời gian này',
         );
