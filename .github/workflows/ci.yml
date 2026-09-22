@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - run: npx prisma generate
       - run: npm run typecheck
       - run: npm run lint:check
       - run: npm test
@@ -52,6 +53,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npm run test:e2e
 
