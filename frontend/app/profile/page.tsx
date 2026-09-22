@@ -47,6 +47,10 @@ export default function ProfilePage() {
       setError('Vui lòng nhập họ và tên')
       return
     }
+    if (phone.trim().length > 20) {
+      setError('Số điện thoại phải ngắn hơn hoặc bằng 20 ký tự')
+      return
+    }
     setSaving(true)
     try {
       await api.updateMe({ name: name.trim(), phone: phone.trim() })
@@ -158,6 +162,7 @@ export default function ProfilePage() {
                 id="profile-phone"
                 className="h-11"
                 inputMode="tel"
+                maxLength={20}
                 placeholder="0901234567"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}

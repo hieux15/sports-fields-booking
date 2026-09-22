@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Ban, CalendarDays, Clock3, MapPin, RefreshCw, Search, Store } from 'lucide-react'
+import { Ban, CalendarDays, Clock3, MapPin, RefreshCw, Search, Store, ArrowRight } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
@@ -268,6 +268,14 @@ export default function BookingsPage() {
                       <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
                         <p className="font-semibold text-primary">{formatVND(bookingTotal(item))}</p>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            nativeButton={false}
+                            render={<Link href={`/bookings/${item.id}`} />}
+                          >
+                            <ArrowRight /> Chi tiết
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

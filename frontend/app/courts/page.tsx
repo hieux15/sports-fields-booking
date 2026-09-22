@@ -1,15 +1,22 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Search, Store } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, RefreshCw, Search, Store } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
-import { COURT_TYPE_OPTIONS, normalizeType, type CourtTypeKey } from '@/lib/court-type'
-import type { Court } from '@/lib/types'
+import { COURT_TYPE_OPTIONS, type CourtTypeKey } from '@/lib/court-type'
+import type { Court, CourtSort } from '@/lib/types'
 import { CourtCard } from '@/components/court-card'
 import { CourtListSkeleton } from '@/components/court-list-skeleton'
 import { CourtsHero } from '@/components/courts-hero'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { toast } from 'sonner'
 
 type TypeFilter = 'ALL' | CourtTypeKey
@@ -19,49 +26,98 @@ const TYPE_FILTERS: { key: TypeFilter; label: string }[] = [
   ...COURT_TYPE_OPTIONS.map(option => ({ key: option.key as TypeFilter, label: option.label })),
 ]
 
+/** Nhãn gửi lên `GET /courts?type=` — database lưu loại sân dạng chữ ("Bóng đá"). */
+const TYPE_LABEL = Object.fromEntries(
+  COURT_TYPE_OPTIONS.map(option => [option.key, option.label])
+) as Record<CourtTypeKey, string>
+
+const SORT_OPTIONS: { value: CourtSort; label: string }[] = [
+  { value: 'name_asc', label: 'Tên A → Z' },
+  { value: 'price_asc', label: 'Giá thấp → cao' },
+  { value: 'price_desc', label: 'Giá cao → thấp' },
+]
+
+/** Số sân mỗi trang. */
+const PAGE_SIZE = 6
+/** Chờ người dùng ngừng gõ rồi mới gọi API để không spam request. */
+const SEARCH_DEBOUNCE_MS = 350
+
 export default function CourtsPage() {
   const [courts, setCourts] = useState<Court[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
   const [query, setQuery] = useState('')
+  /** Từ khóa đã debounce — giá trị thực sự gửi lên server. */
+  const [search, setSearch] = useState('')
   const [type, setType] = useState<TypeFilter>('ALL')
+  const [sort, setSort] = useState<CourtSort>('name_asc')
+  const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   /** Remount list on filter change so stagger animation replays. */
   const [listKey, setListKey] = useState(0)
+  /** Bỏ qua kết quả của request cũ khi người dùng đổi bộ lọc liên tục. */
+  const requestVersion = useRef(0)
+
+  // Mỗi lần đổi từ khóa đều quay về trang 1 sau khi ngừng gõ.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(query.trim())
+      setPage(1)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [query])
 
   const load = useCallback(() => {
+    const version = ++requestVersion.current
     setLoading(true)
     setError(null)
     api
-      .courts()
-      .then(setCourts)
+      .courts({
+        q: search || undefined,
+        type: type === 'ALL' ? undefined : TYPE_LABEL[type],
+        page,
+        limit: PAGE_SIZE,
+        sort,
+      })
+      .then(data => {
+        if (version !== requestVersion.current) return
+        // Bộ lọc mới ít trang hơn: quay về trang 1 thay vì hiện trang trống.
+        if (data.items.length === 0 && data.page > 1) {
+          setPage(1)
+          return
+        }
+        setCourts(data.items)
+        setTotal(data.total)
+        setTotalPages(data.totalPages)
+        setListKey(key => key + 1)
+      })
       .catch(e => {
+        if (version !== requestVersion.current) return
         const message = getErrorMessage(e)
         setError(message)
         toast.error(message)
       })
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (version === requestVersion.current) setLoading(false)
+      })
+  }, [page, search, sort, type])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const filtered = useMemo(() => {
-    const keyword = query.trim().toLowerCase()
-    return courts.filter(court => {
-      if (type !== 'ALL' && normalizeType(court.type) !== type) return false
-      if (!keyword) return true
-      return [court.name, court.address ?? '', court.type].some(value =>
-        value.toLowerCase().includes(keyword)
-      )
-    })
-  }, [courts, query, type])
+  const hasFilter = search.length > 0 || type !== 'ALL'
 
-  const hasFilter = query.trim().length > 0 || type !== 'ALL'
+  const clearFilters = () => {
+    setQuery('')
+    setType('ALL')
+    setPage(1)
+  }
 
-  const setTypeFilter = (next: TypeFilter) => {
-    setType(next)
-    setListKey(k => k + 1)
+  const goToPage = (next: number) => {
+    setPage(next)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   return (
@@ -99,7 +155,10 @@ export default function CourtsPage() {
                   key={filter.key}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => setTypeFilter(filter.key)}
+                  onClick={() => {
+                    setType(filter.key)
+                    setPage(1)
+                  }}
                   className={`relative shrink-0 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
                     active
                       ? 'text-foreground'
@@ -119,7 +178,7 @@ export default function CourtsPage() {
           {/* Fade gợi ý rằng bộ lọc còn cuộn ngang được trên màn nhỏ */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent md:hidden"
+            className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-linear-to-l from-background to-transparent md:hidden"
           />
         </div>
 
@@ -130,27 +189,41 @@ export default function CourtsPage() {
               {loading
                 ? 'Đang tải...'
                 : hasFilter
-                  ? `${filtered.length}/${courts.length} sân phù hợp`
-                  : `${courts.length} sân`}
+                  ? `${total} sân phù hợp`
+                  : `${total} sân`}
             </p>
           </div>
-          {hasFilter && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery('')
-                setType('ALL')
-                setListKey(k => k + 1)
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              items={SORT_OPTIONS}
+              value={sort}
+              onValueChange={value => {
+                if (!value) return
+                setSort(value as CourtSort)
+                setPage(1)
               }}
             >
-              <RefreshCw /> Xóa bộ lọc
-            </Button>
-          )}
+              <SelectTrigger aria-label="Sắp xếp danh sách sân" className="h-9 w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasFilter && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <RefreshCw /> Xóa bộ lọc
+              </Button>
+            )}
+          </div>
         </div>
 
         {loading ? (
-          <CourtListSkeleton count={4} />
+          <CourtListSkeleton count={PAGE_SIZE} />
         ) : error ? (
           <div
             role="alert"
@@ -162,7 +235,7 @@ export default function CourtsPage() {
               <RefreshCw /> Thử lại
             </Button>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : courts.length === 0 ? (
           <div className="flex flex-col items-center gap-2 border border-dashed border-border py-16 text-center">
             <Store className="size-10 text-muted-foreground" />
             <p className="text-lg font-semibold">Không tìm thấy sân nào</p>
@@ -170,27 +243,49 @@ export default function CourtsPage() {
               Thử đổi từ khóa hoặc bỏ bộ lọc loại sân.
             </p>
             {hasFilter && (
-              <Button
-                variant="outline"
-                className="mt-3"
-                onClick={() => {
-                  setQuery('')
-                  setType('ALL')
-                  setListKey(k => k + 1)
-                }}
-              >
+              <Button variant="outline" className="mt-3" onClick={clearFilters}>
                 Xóa bộ lọc
               </Button>
             )}
           </div>
         ) : (
-          <div key={listKey} className="flex flex-col">
-            {filtered.map((court, index) => (
-              <CourtCard key={court.id} court={court} index={index} />
-            ))}
-          </div>
+          <>
+            <div key={listKey} className="flex flex-col">
+              {courts.map((court, index) => (
+                <CourtCard key={court.id} court={court} index={index} />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <nav
+                aria-label="Phân trang danh sách sân"
+                className="mt-8 flex items-center justify-center gap-3"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  <ChevronLeft /> Trước
+                </Button>
+                <span aria-live="polite" className="text-sm text-muted-foreground">
+                  Trang {page}/{totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  Sau <ChevronRight />
+                </Button>
+              </nav>
+            )}
+          </>
         )}
       </section>
     </div>
   )
 }
+
