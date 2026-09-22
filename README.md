@@ -1,5 +1,7 @@
 # Sports Fields Booking
 
+[![CI](https://github.com/hieux15/sports-fields-booking/actions/workflows/ci.yml/badge.svg)](https://github.com/hieux15/sports-fields-booking/actions/workflows/ci.yml)
+
 Sân thể thao booking system for the Vietnamese market. The repository is a
 monorepo split into a NestJS REST API and a Next.js web client.
 
