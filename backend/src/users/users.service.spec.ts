@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -91,6 +95,50 @@ describe('UsersService', () => {
     await expect(
       service.becomeOwner('missing', courtInput),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  // Luồng become-owner cũng tạo sân nên phải kiểm tra giờ/giá giống CourtsService,
+  // nếu không sẽ tạo được sân có openTime "abc" và làm hỏng mọi booking sau đó.
+  it('chặn tạo sân khi giờ mở/đóng cửa không đúng định dạng HH:mm', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      role: 'CUSTOMER',
+    });
+
+    await expect(
+      service.becomeOwner('user-1', { ...courtInput, openTime: 'abc' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  it('chặn tạo sân khi giờ mở cửa không trước giờ đóng cửa', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      role: 'CUSTOMER',
+    });
+
+    await expect(
+      service.becomeOwner('user-1', {
+        ...courtInput,
+        openTime: '22:00',
+        closeTime: '06:00',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  it('chặn tạo sân khi giá thuê ngoài khoảng hợp lý', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      role: 'CUSTOMER',
+    });
+
+    await expect(
+      service.becomeOwner('user-1', { ...courtInput, pricePerHour: 5000 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.court.create).not.toHaveBeenCalled();
   });
 

@@ -39,7 +39,7 @@ describe('CourtsService', () => {
     expect(service).toBeDefined();
   });
 
-  it('chặn giờ mở cửa không đứng trước giờ đóng cửa', async () => {
+  it('chặn giờ mở cửa không đứng trước giờ đóng cửa', () => {
     expect(() =>
       service.create(
         {
@@ -55,7 +55,7 @@ describe('CourtsService', () => {
     expect(prisma.court.create).not.toHaveBeenCalled();
   });
 
-  it('chặn giá sân ngoài khoảng hợp lý', async () => {
+  it('chặn giá sân ngoài khoảng hợp lý', () => {
     expect(() =>
       service.create(
         {

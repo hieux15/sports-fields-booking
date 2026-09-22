@@ -7,6 +7,10 @@ import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateMeDto } from './dto/update-me.dto';
 import { BecomeOwnerDto } from './dto/become-owner.dto';
+import {
+  validateCourtPrice,
+  validateCourtSchedule,
+} from '../courts/court-validation';
 
 @Injectable()
 export class UsersService {
@@ -72,6 +76,11 @@ export class UsersService {
     if (user.role === Role.OWNER) {
       throw new ConflictException('Tài khoản đã là chủ sân');
     }
+
+    // Luồng này cũng tạo sân nên phải dùng chung validator với CourtsService,
+    // nếu không sẽ tạo được sân có openTime/closeTime hoặc giá không hợp lệ.
+    validateCourtSchedule(dto.openTime, dto.closeTime);
+    validateCourtPrice(dto.pricePerHour);
 
     return this.prisma.$transaction(async (tx) => {
       // Vẫn phải kiểm tra role bên trong transaction: hai request đồng thời có thể
