@@ -1,7 +1,9 @@
 {
-  "name": "my-project",
+  "name": "sports-fields-booking-web",
   "version": "0.1.0",
+  "description": "Web client đặt sân thể thao: Next.js 16 (App Router) + React 19 + Tailwind v4 + shadcn/ui.",
   "private": true,
+  "license": "UNLICENSED",
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "dev": "next dev -p 3001",

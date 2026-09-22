@@ -32,12 +32,31 @@ npm run start:dev           # http://localhost:3000
 Useful scripts:
 
 ```bash
-npm run build      # nest build -> dist/
-npm run start:prod # node dist/main
-npm test           # unit tests (jest)
-npm run test:e2e   # e2e tests
-npm run lint       # eslint + prettier --fix
+npm run build        # nest build -> dist/
+npm run start:prod   # node dist/main
+npm test             # unit tests (jest)
+npm run test:cov     # unit tests + coverage report
+npm run test:e2e     # e2e tests (needs a reachable database)
+npm run typecheck    # tsc --noEmit
+npm run lint         # eslint --fix
+npm run lint:check   # eslint, no --fix
+npm run format       # prettier --write
+npm run format:check # prettier --check
 ```
+
+### API documentation (Swagger)
+
+The API is documented with `@nestjs/swagger` and generated from the same
+decorators the runtime uses, so it cannot drift silently:
+
+- Swagger UI: <http://localhost:3000/docs>
+- OpenAPI JSON: <http://localhost:3000/docs-json>
+
+Set `SWAGGER_ENABLED=false` to turn both off. To try protected routes, call
+`POST /auth/login` with a demo account, then paste the returned `access_token`
+into the **Authorize** dialog. `src/swagger.spec.ts` asserts that every route
+listed below exists in the document and that bearer auth is attached to the
+authenticated ones.
 
 ### Environment variables (`backend/.env`)
 
@@ -48,6 +67,7 @@ npm run lint       # eslint + prettier --fix
 | `PORT` | HTTP port, default `3000` |
 | `JWT_SECRET` | Secret used to sign JWT access tokens |
 | `CORS_ORIGIN` | Comma-separated allowed browser origins, default `http://localhost:3001` |
+| `SWAGGER_ENABLED` | Set to `false` to disable `/docs` and `/docs-json` (default: enabled) |
 
 ### API overview
 
@@ -88,6 +108,11 @@ Notes for API consumers:
   `status` is not `CANCELLED` (`message` reports how many are left). When it
   succeeds it first deletes the `CANCELLED` bookings of that court in the same
   transaction, which keeps the `Booking.courtId` foreign key valid.
+- `POST /users/become-owner` creates a court, so it applies the same schedule and
+  price rules as `POST /courts`: `openTime`/`closeTime` must match `HH:mm` and
+  `openTime < closeTime`, and the price must stay inside the same range. An
+  invalid payload is rejected with `400` before the transaction starts, so a
+  failed upgrade never leaves an `OWNER` account without a court.
 - `POST /bookings` answers `409` when the court already has a booking whose
   `status` is not `CANCELLED` and whose `[startTime, endTime)` overlaps the
   requested range. The same rule is enforced by a database constraint, so two

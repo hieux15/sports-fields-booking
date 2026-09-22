@@ -6,33 +6,7 @@ import {
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
 import { PrismaService } from '../prisma/prisma.service';
-
-const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
-const MIN_PRICE_PER_HOUR = 10000;
-const MAX_PRICE_PER_HOUR = 10000000;
-
-function validateCourtSchedule(openTime: string, closeTime: string) {
-  if (!TIME_PATTERN.test(openTime) || !TIME_PATTERN.test(closeTime)) {
-    throw new BadRequestException(
-      'Giờ mở cửa và giờ đóng cửa phải có định dạng HH:mm',
-    );
-  }
-  if (openTime >= closeTime) {
-    throw new BadRequestException('Giờ mở cửa phải trước giờ đóng cửa');
-  }
-}
-
-function validateCourtPrice(pricePerHour: number) {
-  if (
-    !Number.isFinite(pricePerHour) ||
-    pricePerHour < MIN_PRICE_PER_HOUR ||
-    pricePerHour > MAX_PRICE_PER_HOUR
-  ) {
-    throw new BadRequestException(
-      `Giá sân phải từ ${MIN_PRICE_PER_HOUR.toLocaleString('vi-VN')} đến ${MAX_PRICE_PER_HOUR.toLocaleString('vi-VN')} đồng/giờ`,
-    );
-  }
-}
+import { validateCourtPrice, validateCourtSchedule } from './court-validation';
 
 @Injectable()
 export class CourtsService {
