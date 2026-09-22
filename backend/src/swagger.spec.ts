@@ -37,6 +37,7 @@ describe('OpenAPI document', () => {
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
         '/',
+        '/health',
         '/auth/register',
         '/auth/login',
         '/users/me',

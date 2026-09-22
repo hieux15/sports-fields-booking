@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -41,6 +42,8 @@ export class BookingsController {
 
   @Post()
   @Roles(Role.CUSTOMER)
+  // 20 đơn/phút cho mỗi IP: chặn spam đặt sân giữ chỗ ảo.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Tạo đơn đặt sân (CUSTOMER)',
     description:
@@ -55,6 +58,10 @@ export class BookingsController {
   @ApiResponse({
     status: 409,
     description: 'Sân đã có đơn đặt trong khoảng thời gian này',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Quá nhiều đơn trong thời gian ngắn',
   })
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateBookingDto) {
     return this.bookingsService.create(dto, req.user.id);

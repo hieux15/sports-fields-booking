@@ -1,4 +1,5 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SWAGGER_PATH, setupSwagger } from './swagger';
@@ -16,7 +17,10 @@ async function bootstrap() {
     }),
   );
 
-  const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3001')
+  // Config đã được validate lúc khởi động (xem config/env.validation.ts).
+  const config = app.get(ConfigService);
+
+  const corsOrigins = (config.get<string>('CORS_ORIGIN') ?? '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -27,12 +31,12 @@ async function bootstrap() {
   });
 
   // Bật mặc định để người xem demo mở được /docs; đặt SWAGGER_ENABLED=false để tắt.
-  const swaggerEnabled = process.env.SWAGGER_ENABLED !== 'false';
+  const swaggerEnabled = config.get<string>('SWAGGER_ENABLED') !== 'false';
   if (swaggerEnabled) {
     setupSwagger(app);
   }
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(config.get('PORT') ?? 3000);
   await app.listen(port);
 
   const logger = new Logger('Bootstrap');
