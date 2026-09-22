@@ -1,5 +1,5 @@
 import { mockBookings, mockCourts, mockUsers, courtDetail, ownerBookings } from './mock-data'
-import type { BookingInput, BookingWithCourt, Court, CourtDetail, CourtInput, OwnerBooking, User } from './types'
+import type { BookingInput, BookingWithCourt, Court, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, User } from './types'
 import { normalizeApiError } from './api-error'
 import { clearSession, readToken } from './session'
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === '1'
@@ -16,8 +16,8 @@ function parseBody(text: string): unknown {
 }
 
 /** Token hết hạn: xóa phiên và đưa người dùng về trang đăng nhập. */
-function handleUnauthorized(path: string, hadToken: boolean) {
-  if (!hadToken || path.startsWith('/auth/')) return
+function handleUnauthorized(path: string, hadToken: boolean, status: number) {
+  if (status !== 401 || !hadToken || path.startsWith('/auth/')) return
   clearSession()
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
     window.location.assign('/login')
@@ -36,18 +36,72 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
   const body = parseBody(await res.text())
   if (!res.ok) {
-    handleUnauthorized(path, Boolean(token))
+    handleUnauthorized(path, Boolean(token), res.status)
     throw normalizeApiError(body ?? { message: res.statusText }, res.status)
   }
   return body as T
 }
+
+/** Bỏ tham số rỗng để URL gọn (`?q=&page=1` là nhiễu). */
+function toQueryString(query: CourtQuery) {
+  const params = new URLSearchParams()
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') params.set(key, String(value))
+  })
+  const search = params.toString()
+  return search ? `?${search}` : ''
+}
+
+/**
+ * Bắt chước `GET /courts` (lọc + sắp xếp + phân trang) cho chế độ mock, để
+ * trang chạy được khi không có backend mà vẫn đúng shape dữ liệu như thật.
+ */
+function paginateCourts(query: CourtQuery): Paginated<Court> {
+  const keyword = query.q?.trim().toLowerCase() ?? ''
+  const type = query.type?.trim().toLowerCase() ?? ''
+  const page = query.page ?? 1
+  const limit = query.limit ?? 12
+
+  const matched = mockCourts.filter(court => {
+    const haystack = `${court.name} ${court.address ?? ''}`.toLowerCase()
+    if (keyword && !haystack.includes(keyword)) return false
+    if (type && court.type.toLowerCase() !== type) return false
+    const price = Number(court.pricePerHour)
+    if (query.minPrice !== undefined && price < query.minPrice) return false
+    if (query.maxPrice !== undefined && price > query.maxPrice) return false
+    return true
+  })
+
+  const sorted = [...matched].sort((a, b) => {
+    switch (query.sort) {
+      case 'price_asc':
+        return Number(a.pricePerHour) - Number(b.pricePerHour)
+      case 'price_desc':
+        return Number(b.pricePerHour) - Number(a.pricePerHour)
+      case 'name_desc':
+        return b.name.localeCompare(a.name)
+      default:
+        return a.name.localeCompare(b.name)
+    }
+  })
+
+  return {
+    items: sorted.slice((page - 1) * limit, page * limit),
+    total: sorted.length,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(sorted.length / limit)),
+  }
+}
+
 export const api = {
+
  async login(email: string, password: string) { if (useMock) { const user = mockUsers.find(u => u.email === email); if (!user || password !== '123456') throw new Error('Email hoặc mật khẩu không đúng'); return { access_token: `mock-${user.id}` } } return request<{ access_token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) },
  async register(data: { email: string; password: string; name: string }) { if (useMock) { if (mockUsers.some(u => u.email === data.email)) throw new Error('Email đã được sử dụng'); const user: User = { id: `mock-user-${Date.now()}`, email: data.email, name: data.name, phone: null, role: 'CUSTOMER', createdAt: new Date().toISOString() }; mockUsers.push(user); return user } return request<User>('/auth/register', { method: 'POST', body: JSON.stringify(data) }) },
  async becomeOwner(data: CourtInput) { if (useMock) { const user = { ...currentUser(), role: 'OWNER' as const }; const index = mockUsers.findIndex(item => item.id === user.id); if (index >= 0) mockUsers[index] = user; localStorage.setItem('sfb_user', JSON.stringify(user)); const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, ownerId: user.id }; mockCourts.push(court); return { user, court } } return request<{ user: User; court: Court }>('/users/become-owner', { method: 'POST', body: JSON.stringify(data) }) },
  async me() { if (useMock) return currentUser(); return request<User>('/users/me') },
  async updateMe(data: { name?: string; phone?: string }) { if (useMock) { const user = { ...currentUser(), ...data }; localStorage.setItem('sfb_user', JSON.stringify(user)); return user } return request<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }) },
- async courts() { if (useMock) return mockCourts; return request<Court[]>('/courts') },
+ async courts(query: CourtQuery = {}) { if (useMock) return paginateCourts(query); return request<Paginated<Court>>(`/courts${toQueryString(query)}`) },
  async myCourts() { if (useMock) return mockCourts.filter(c => c.ownerId === currentUser().id); return request<Court[]>('/courts/me') },
  async court(id: string) { if (useMock) { const c = mockCourts.find(c => c.id === id); if (!c) throw new Error('Không tìm thấy sân thể thao này'); return courtDetail(c) } return request<CourtDetail>(`/courts/${id}`) },
  async createCourt(data: CourtInput) { if (useMock) { const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, ownerId: currentUser().id }; mockCourts.push(court); return court } return request<Court>('/courts', { method: 'POST', body: JSON.stringify(data) }) },

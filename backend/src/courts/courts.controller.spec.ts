@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { CourtsController } from './courts.controller';
 import { CourtsService } from './courts.service';
 import { CreateCourtDto } from './dto/create-court.dto';
+import { QueryCourtsDto } from './dto/query-courts.dto';
 
 type RequestWithUser = Parameters<CourtsController['create']>[0];
 
@@ -51,10 +52,14 @@ describe('CourtsController', () => {
     expect(courtsService.create).toHaveBeenCalledWith(dto, 'owner-1');
   });
 
-  it('ủy quyền lấy danh sách sân cho service', async () => {
-    await controller.findAll();
+  it('ủy quyền lấy danh sách sân cho service kèm query phân trang', async () => {
+    const query = new QueryCourtsDto();
+    query.q = 'cầu giấy';
+    query.page = 2;
 
-    expect(courtsService.findAll).toHaveBeenCalledWith();
+    await controller.findAll(query);
+
+    expect(courtsService.findAll).toHaveBeenCalledWith(query);
   });
 
   it('ủy quyền lấy chi tiết sân cho service', async () => {

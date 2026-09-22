@@ -9,6 +9,29 @@ export type OwnerBooking = Booking & { court: Court; user: { id: string; name: s
 export type CourtInput = { name: string; type: string; address?: string; pricePerHour: number; openTime: string; closeTime: string }
 export type BookingInput = { courtId: string; startTime: string; endTime: string }
 export type Session = { token: string; user: User }
+
+/** Thứ tự sắp xếp mà `GET /courts?sort=` chấp nhận. */
+export type CourtSort = 'name_asc' | 'name_desc' | 'price_asc' | 'price_desc'
+
+/** Query string của `GET /courts` — mọi trường đều tuỳ chọn. */
+export type CourtQuery = {
+  q?: string
+  type?: string
+  minPrice?: number
+  maxPrice?: number
+  page?: number
+  limit?: number
+  sort?: CourtSort
+}
+
+/** Vỏ bọc mà mọi endpoint danh sách có phân trang trả về. */
+export type Paginated<T> = {
+  items: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
 export const COURT_TYPES = ['Bóng đá', 'Cầu lông', 'Tennis', 'Pickleball', 'Bóng rổ', 'Khác']
 export const BOOKING_STATUSES: BookingStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED']
 

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -25,6 +26,8 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { UpdateCourtDto } from './dto/update-court.dto';
+import { QueryCourtsDto } from './dto/query-courts.dto';
+import { PAGINATED_SCHEMA } from '../common/paginated';
 interface AuthenticatedRequest extends Request {
   user: {
     id: string;
@@ -54,13 +57,18 @@ export class CourtsController {
 
   @Get()
   @ApiOperation({
-    summary: 'Danh sách tất cả sân',
+    summary: 'Tìm kiếm / lọc / sắp xếp / phân trang danh sách sân',
     description:
-      'Public, không phân trang và không lọc. `pricePerHour` là Prisma Decimal nên trả về dạng chuỗi.',
+      'Mọi tham số đều tuỳ chọn. `q` tìm trong tên và địa chỉ, `type` lọc theo loại sân (không phân biệt hoa thường), `minPrice`/`maxPrice` lọc theo giá, `sort` chọn thứ tự. ' +
+      '`pricePerHour` là Prisma Decimal nên trả về dạng chuỗi.',
   })
-  @ApiOkResponse({ description: 'Mảng sân thể thao' })
-  findAll() {
-    return this.courtsService.findAll();
+  @ApiOkResponse({
+    description: 'Danh sách sân của trang hiện tại',
+    schema: PAGINATED_SCHEMA,
+  })
+  @ApiResponse({ status: 400, description: 'Tham số query không hợp lệ' })
+  findAll(@Query() query: QueryCourtsDto) {
+    return this.courtsService.findAll(query);
   }
 
   // Phải khai báo trước @Get(':id') để "me" không bị hiểu là id sân

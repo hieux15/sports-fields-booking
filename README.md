@@ -65,7 +65,8 @@ authenticated ones.
 | `DATABASE_URL` | PostgreSQL connection string (pooled, used by the app) |
 | `DIRECT_URL` | Direct connection string (used for migrations) |
 | `PORT` | HTTP port, default `3000` |
-| `JWT_SECRET` | Secret used to sign JWT access tokens |
+| `JWT_SECRET` | Secret used to sign JWT access tokens (min 32 characters, validated at startup) |
+| `JWT_EXPIRES_IN` | Access token lifetime, default `7d` |
 | `CORS_ORIGIN` | Comma-separated allowed browser origins, default `http://localhost:3001` |
 | `SWAGGER_ENABLED` | Set to `false` to disable `/docs` and `/docs-json` (default: enabled) |
 
@@ -77,11 +78,12 @@ All routes are served without an `/api` prefix. Protected routes expect
 | Method | Route | Access | Description |
 | --- | --- | --- | --- |
 | `GET` | `/` | public | Health check (`Hello World!`) |
+| `GET` | `/health` | public | Deployment health check: pings the database and answers `503` when it is down |
 | `POST` | `/auth/register` | public | Create a `CUSTOMER` account, returns the user (no token) |
 | `POST` | `/auth/login` | public | Returns `{ access_token }` only, call `/users/me` for the profile |
 | `GET` | `/users/me` | authenticated | Current user profile |
 | `PATCH` | `/users/me` | authenticated | Update `name` / `phone` |
-| `GET` | `/courts` | public | All courts (no owner, filters or pagination) |
+| `GET` | `/courts` | public | Paginated list with server-side search, filters, sort and pagination |
 | `GET` | `/courts/me` | `OWNER` | Your own courts, sorted by `name` |
 | `GET` | `/courts/:id` | public | Court detail including owner name and phone |
 | `POST` | `/courts` | `OWNER` | Create a court |
@@ -95,6 +97,20 @@ All routes are served without an `/api` prefix. Protected routes expect
 | `PATCH` | `/bookings/:id/confirm` | `OWNER` | Confirm a booking made on one of your courts |
 
 Notes for API consumers:
+
+- `GET /courts` answers a paginated envelope
+  (`{ items, total, page, limit, totalPages }`) instead of a bare array. All
+  parameters are optional: `q` (matches name or address, case-insensitive),
+  `type`, `minPrice`, `maxPrice`, `page` (default `1`), `limit` (default `12`,
+  max `50`) and `sort` (`name_asc` | `name_desc` | `price_asc` | `price_desc`).
+  Every sort order adds `id` as a tie-break so a row never jumps between pages,
+  and unknown query parameters are rejected with `400`.
+- Rate limiting is global at 120 requests/minute per IP (`429` beyond that) and
+  tightened to 10/minute on `POST /auth/login` and `POST /auth/register`, plus
+  20/minute on `POST /bookings`.
+- Startup fails fast: `DATABASE_URL`, `DIRECT_URL` and a `JWT_SECRET` of at least
+  32 characters are mandatory, so a misconfigured deploy stops immediately
+  instead of signing tokens with `undefined`.
 
 - `Court.pricePerHour` is a Prisma `Decimal`, so it is serialised as a **string**
   (for example `"200000"`). Convert it with `Number()` before doing any math.
