@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { Prisma } from '@prisma/client';
 
 const MIN_BOOKING_MINUTES = 60;
 const MAX_BOOKING_MINUTES = 240;
@@ -139,6 +140,10 @@ export class BookingsService {
     }
     // tạo booking
     try {
+      // Chốt giá tại thời điểm đặt: totalPrice = pricePerHour × số giờ (làm tròn
+      // về nguyên đồng để tránh số lẻ khi thời lượng không chia hết cho 60 phút).
+      const durationHours = new Prisma.Decimal(durationMinutes).div(60);
+      const pricePerHour = court.pricePerHour;
       const booking = await this.prisma.booking.create({
         data: {
           courtId: dto.courtId,
@@ -146,6 +151,8 @@ export class BookingsService {
           startTime: startTime,
           endTime: endTime,
           status: 'PENDING',
+          pricePerHour: pricePerHour,
+          totalPrice: pricePerHour.mul(durationHours).toDecimalPlaces(0),
         },
       });
       return booking;
@@ -165,6 +172,7 @@ export class BookingsService {
       include: {
         court: true,
       },
+      orderBy: { startTime: 'desc' },
     });
     return bookings;
   }

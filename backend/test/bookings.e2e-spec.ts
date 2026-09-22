@@ -16,6 +16,8 @@ interface LoginResponse {
 interface BookingResponse {
   id: string;
   status: string;
+  pricePerHour?: string;
+  totalPrice?: string;
 }
 
 interface ErrorResponse {
@@ -125,6 +127,39 @@ describe('Bookings overlap invariants (e2e)', () => {
     expect(parseJson<BookingResponse>(second).status).toBe('PENDING');
   });
 
+  it('snapshots the court price at booking time', async () => {
+    const created = await postBooking({
+      courtId,
+      startTime: at(14),
+      endTime: at(15),
+    }).expect(201);
+
+    const body = parseJson<BookingResponse>(created);
+    expect(body.pricePerHour).toBe('150000');
+    expect(body.totalPrice).toBe('150000');
+
+    // Chủ sân đổi giá sau khi đặt: đơn đã đặt vẫn giữ nguyên giá cũ.
+    await prisma.court.update({
+      where: { id: courtId },
+      data: { pricePerHour: 300000 },
+    });
+
+    const fetched = await request(app.getHttpServer())
+      .get(`/bookings/${body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const afterPriceChange = parseJson<BookingResponse>(fetched);
+    expect(afterPriceChange.pricePerHour).toBe('150000');
+    expect(afterPriceChange.totalPrice).toBe('150000');
+
+    // Trả lại giá cũ để các test sau không bị ảnh hưởng.
+    await prisma.court.update({
+      where: { id: courtId },
+      data: { pricePerHour: 150000 },
+    });
+  });
+
   it('accepts exactly one of two concurrent requests for the same slot', async () => {
     const payload = { courtId, startTime: at(10), endTime: at(11) };
 
@@ -187,6 +222,8 @@ describe('Bookings overlap invariants (e2e)', () => {
           startTime: new Date(at(15, 30)),
           endTime: new Date(at(16, 30)),
           status: 'PENDING',
+          pricePerHour: 150000,
+          totalPrice: 150000,
         },
       }),
     ).rejects.toThrow(/booking_no_overlap/);
@@ -219,6 +256,8 @@ describe('Bookings overlap invariants (e2e)', () => {
         startTime: new Date(at(17, 30)),
         endTime: new Date(at(18, 30)),
         status: 'CANCELLED',
+        pricePerHour: 150000,
+        totalPrice: 150000,
       },
     });
     expect(cancelledOverlap.status).toBe('CANCELLED');
@@ -249,6 +288,8 @@ describe('Bookings overlap invariants (e2e)', () => {
           startTime: new Date(at(19)),
           endTime: new Date(at(19)),
           status: 'PENDING',
+          pricePerHour: 150000,
+          totalPrice: 150000,
         },
       }),
     ).rejects.toThrow(/booking_time_range_valid/);

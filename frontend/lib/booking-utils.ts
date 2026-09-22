@@ -1,12 +1,13 @@
-import { hoursBetween } from '@/lib/format'
 import type { BookingStatus, BookingWithCourt, OwnerBooking } from '@/lib/types'
 
-type PricedBooking = Pick<BookingWithCourt | OwnerBooking, 'startTime' | 'endTime' | 'status'> & {
-  court: { pricePerHour: string }
-}
+type PricedBooking = Pick<BookingWithCourt | OwnerBooking, 'startTime' | 'endTime' | 'status' | 'totalPrice'>
 
+/**
+ * Tổng tiền của một đơn = `totalPrice` chốt **tại thời điểm đặt sân**, nên chủ
+ * sân có đổi `pricePerHour` sau này cũng không làm lệch doanh thu quá khứ.
+ */
 export function bookingTotal(booking: PricedBooking) {
-  return hoursBetween(booking.startTime, booking.endTime) * Number(booking.court.pricePerHour)
+  return Number(booking.totalPrice)
 }
 
 export function isUpcomingBooking(booking: Pick<PricedBooking, 'startTime' | 'status'>) {

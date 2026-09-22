@@ -37,6 +37,7 @@ describe('BookingsService', () => {
     id: 'court-1',
     openTime: '06:00',
     closeTime: '22:00',
+    pricePerHour: new Prisma.Decimal(200000),
   };
 
   const validBooking = {
@@ -188,5 +189,52 @@ describe('BookingsService', () => {
     await expect(service.create(validBooking, 'user-1')).rejects.toBe(
       databaseError,
     );
+  });
+
+  it('snapshots the court price and total at creation time', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    echoCreatedBooking();
+
+    const result = await service.create(validBooking, 'user-1');
+
+    expect(result.pricePerHour).toEqual(new Prisma.Decimal(200000));
+    expect(result.totalPrice).toEqual(new Prisma.Decimal(200000));
+    const snapshotData = expect.objectContaining({
+      pricePerHour: new Prisma.Decimal(200000),
+      totalPrice: new Prisma.Decimal(200000),
+    }) as Prisma.BookingCreateInput;
+    expect(prisma.booking.create).toHaveBeenCalledWith({ data: snapshotData });
+  });
+
+  it('computes total for a multi-hour booking', async () => {
+    prisma.court.findUnique.mockResolvedValue(court);
+    prisma.booking.findFirst.mockResolvedValue(null);
+    echoCreatedBooking();
+
+    const result = await service.create(
+      {
+        courtId: 'court-1',
+        // 18:00–20:30 = 2.5 giờ, vẫn nằm trong khung 06:00–22:00 của sân.
+        startTime: '2027-01-15T18:00:00+07:00',
+        endTime: '2027-01-15T20:30:00+07:00',
+      },
+      'user-1',
+    );
+
+    // 2.5 giờ × 200,000 = 500,000.
+    expect(result.totalPrice).toEqual(new Prisma.Decimal(500000));
+  });
+
+  it('returns bookings ordered by startTime descending', async () => {
+    prisma.booking.findMany.mockResolvedValue([]);
+
+    await service.findAll('user-1');
+
+    expect(prisma.booking.findMany).toHaveBeenCalledWith({
+      where: { userId: 'user-1' },
+      include: { court: true },
+      orderBy: { startTime: 'desc' },
+    });
   });
 });

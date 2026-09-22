@@ -112,8 +112,13 @@ Notes for API consumers:
   32 characters are mandatory, so a misconfigured deploy stops immediately
   instead of signing tokens with `undefined`.
 
-- `Court.pricePerHour` is a Prisma `Decimal`, so it is serialised as a **string**
-  (for example `"200000"`). Convert it with `Number()` before doing any math.
+- `Court.pricePerHour` and `Booking.pricePerHour`/`Booking.totalPrice` are Prisma
+  `Decimal`s, so they are serialised as **strings** (for example `"200000"`).
+  Convert them with `Number()` before doing any math.
+- A booking **snapshots the court price when it is created**: `pricePerHour` and
+  `totalPrice` are written in the same transaction as the booking row, so
+  changing a court's price later never rewrites the revenue of past bookings.
+  Existing rows were backfilled from their court's price at migration time.
 - A global `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`,
   so request bodies must contain only the documented fields.
 - Errors use the standard Nest shape `{ statusCode, message, error }` where

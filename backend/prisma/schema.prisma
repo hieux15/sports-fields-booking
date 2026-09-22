@@ -32,6 +32,8 @@ model Court {
   ownerId      String
   owner        User     @relation(fields: [ownerId], references: [id])
   bookings     Booking[]
+
+  @@index([ownerId])
 }
 
 model Booking {
@@ -43,9 +45,15 @@ model Booking {
   startTime DateTime
   endTime   DateTime
   status    BookingStatus @default(PENDING)
+  // Snapshot giá tại thời điểm đặt: chủ sân đổi giá sau đó cũng không ghi
+  // lại được doanh thu của các đơn cũ.
+  pricePerHour Decimal
+  totalPrice   Decimal
   createdAt DateTime      @default(now())
 
   @@index([courtId, startTime, endTime])
+  // Phục vụ GET /bookings/me (lọc theo userId, sắp xếp theo startTime desc).
+  @@index([userId, startTime])
 }
 
 enum Role {
