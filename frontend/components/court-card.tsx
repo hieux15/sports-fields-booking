@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
-import { COURT_FALLBACK_IMAGE, courtTypeMeta } from '@/lib/court-type'
+import { courtTypeMeta } from '@/lib/court-type'
+import { CourtImage } from '@/components/court-image'
 import { formatVND } from '@/lib/format'
 import type { Court } from '@/lib/types'
 
@@ -23,17 +24,10 @@ export function CourtCard({
         href={`/courts/${court.id}`}
         className="grid gap-4 py-6 sm:grid-cols-[minmax(0,220px)_1fr] sm:items-stretch sm:gap-6"
       >
-        <div className="relative aspect-[16/10] overflow-hidden sm:aspect-auto sm:min-h-[140px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={meta.image}
-            onError={(event) => {
-              event.currentTarget.onerror = null
-              event.currentTarget.src = COURT_FALLBACK_IMAGE
-            }}
-            alt=""
-            loading="lazy"
-            decoding="async"
+        <div className="relative aspect-[16/10] overflow-hidden bg-muted sm:aspect-auto sm:min-h-[140px]">
+          <CourtImage
+            court={court}
+            sizes="(min-width: 640px) 220px, 100vw"
             className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.03]"
           />
           <div className={`absolute inset-0 ${meta.overlay}`} />

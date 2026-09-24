@@ -6,6 +6,7 @@ import { CalendarCheck, Clock3, MapPin, Pencil, Trash2 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { courtTypeMeta } from '@/lib/court-type'
+import { CourtImage } from '@/components/court-image'
 import { formatVND } from '@/lib/format'
 import type { Court } from '@/lib/types'
 import {
@@ -54,10 +55,12 @@ export function OwnerCourtCard({
     <Card className="shadow-none">
       <CardContent className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          <div
-            className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-cover bg-center text-white"
-            style={{ backgroundImage: `url("${meta.image}"), url("/court-fallback.svg")` }}
-          >
+          <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-white">
+            <CourtImage
+              court={court}
+              sizes="48px"
+              className="absolute inset-0 size-full object-cover"
+            />
             <div className={`absolute inset-0 ${meta.overlay}`} />
             <Icon className="relative size-6" />
           </div>

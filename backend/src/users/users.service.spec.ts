@@ -26,6 +26,7 @@ describe('UsersService', () => {
     name: 'Green Field 03',
     type: 'Bóng đá',
     address: '12 Lê Lợi, Hà Nội',
+    imageUrl: 'https://cdn.example.com/san-bong.png',
     pricePerHour: 150000,
     openTime: '06:00',
     closeTime: '22:00',

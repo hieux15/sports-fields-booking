@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { CourtsModule } from './courts/courts.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { HealthModule } from './health/health.module';
+import { StorageModule } from './storage/storage.module';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -19,8 +20,6 @@ import { validateEnv } from './config/env.validation';
       envFilePath: '.env',
       validate: validateEnv,
     }),
-    // Giới hạn chung 120 request/phút cho mỗi IP; route nhạy cảm siết riêng
-    // bằng @Throttle (xem auth.controller.ts).
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     AuthModule,
     PrismaModule,
@@ -28,6 +27,7 @@ import { validateEnv } from './config/env.validation';
     CourtsModule,
     BookingsModule,
     HealthModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

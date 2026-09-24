@@ -43,6 +43,7 @@ describe('OpenAPI document', () => {
         '/users/me',
         '/courts',
         '/courts/me',
+        '/courts/images',
         '/courts/{id}',
         '/courts/{id}/availability',
         '/courts/{id}/bookings',
@@ -73,6 +74,17 @@ describe('OpenAPI document', () => {
     expect(document.paths['/auth/register']?.post?.security).toBeUndefined();
     expect(document.paths['/courts']?.get?.security).toBeUndefined();
     expect(document.paths['/courts/{id}']?.get?.security).toBeUndefined();
+  });
+
+  it('khai báo route upload ảnh sân là multipart và yêu cầu token', () => {
+    const upload = document.paths['/courts/images']?.post;
+
+    expect(upload?.security).toEqual([{ 'access-token': [] }]);
+    // Dùng dạng mảng để key chứa "/" và "-" không bị hiểu là đường dẫn lồng nhau.
+    expect(upload?.requestBody).toHaveProperty([
+      'content',
+      'multipart/form-data',
+    ]);
   });
 
   it('sinh schema body cho các DTO đầu vào', () => {

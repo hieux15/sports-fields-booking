@@ -11,6 +11,10 @@ import {
   MinLength,
   validateSync,
 } from 'class-validator';
+import {
+  DEFAULT_IMAGE_MAX_BYTES,
+  MAX_IMAGE_BYTES_LIMIT,
+} from '../storage/image-upload';
 
 /**
  * Khai báo mọi biến môi trường mà app cần. Dùng class-validator sẵn có của dự án
@@ -54,6 +58,41 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsBooleanString()
   SWAGGER_ENABLED: string = 'true';
+
+  /**
+   * Gốc URL công khai của API, dùng để dựng link ảnh khi lưu file ở đĩa
+   * (`backend/uploads`). Không ảnh hưởng driver Supabase Storage.
+   */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  PUBLIC_BASE_URL: string = 'http://localhost:3000';
+
+  /** Kích thước tối đa của một ảnh sân, tính bằng byte (mặc định 5MB). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1024)
+  @Max(MAX_IMAGE_BYTES_LIMIT)
+  UPLOAD_MAX_BYTES: number = DEFAULT_IMAGE_MAX_BYTES;
+
+  /**
+   * Supabase Storage (tuỳ chọn). Có đủ URL + service role key thì ảnh sân được
+   * lưu trên Supabase; thiếu thì StorageService tự ghi ra `backend/uploads`,
+   * nhờ vậy máy mới clone và CI vẫn chạy được mà không cần cấu hình gì.
+   */
+  @IsOptional()
+  @IsString()
+  SUPABASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  SUPABASE_STORAGE_BUCKET: string = 'court-images';
 }
 
 /**

@@ -18,6 +18,9 @@ backend/.env.local
 # Prisma generated client
 backend/generated/prisma
 
+# Ảnh sân upload khi chưa cấu hình Supabase Storage (chỉ là dữ liệu runtime)
+backend/uploads
+
 # =========================
 # Frontend (Next.js)
 # =========================

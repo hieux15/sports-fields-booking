@@ -14,7 +14,8 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
-import { COURT_FALLBACK_IMAGE, courtTypeMeta } from '@/lib/court-type'
+import { courtTypeMeta } from '@/lib/court-type'
+import { CourtImage } from '@/components/court-image'
 import {
   formatVND,
   hoursBetween,
@@ -198,17 +199,11 @@ export default function CourtDetailClient({ id }: { id: string }) {
   return (
     <div>
       {/* Full-bleed photo hero */}
-      <section className="relative min-h-[min(48vh,420px)] overflow-hidden text-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={meta.image}
-          onError={(event) => {
-            event.currentTarget.onerror = null
-            event.currentTarget.src = COURT_FALLBACK_IMAGE
-          }}
-          alt=""
-          fetchPriority="high"
-          decoding="async"
+      <section className="relative min-h-[min(48vh,420px)] overflow-hidden bg-muted text-white">
+        <CourtImage
+          court={court}
+          priority
+          sizes="100vw"
           className="hero-photo absolute inset-0 size-full object-cover"
         />
         <div className={`absolute inset-0 ${meta.overlay}`} />

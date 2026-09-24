@@ -71,6 +71,11 @@ authenticated ones.
 | `JWT_EXPIRES_IN` | Access token lifetime, default `7d` |
 | `CORS_ORIGIN` | Comma-separated allowed browser origins, default `http://localhost:3001` |
 | `SWAGGER_ENABLED` | Set to `false` to disable `/docs` and `/docs-json` (default: enabled) |
+| `PUBLIC_BASE_URL` | Public origin of this API, default `http://localhost:3000`. Used to build photo links only when they are stored on disk |
+| `UPLOAD_MAX_BYTES` | Max size of one court photo in bytes, default `5242880` (5MB), max `20971520` (20MB) |
+| `SUPABASE_URL` | Supabase project URL. Fill this **and** `SUPABASE_SERVICE_ROLE_KEY` to store photos in Supabase Storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key used to upload/delete objects. Never expose it to the browser |
+| `SUPABASE_STORAGE_BUCKET` | Bucket for court photos, default `court-images` (must exist and be public) |
 
 ### API overview
 
@@ -89,6 +94,7 @@ All routes are served without an `/api` prefix. Protected routes expect
 | `GET` | `/courts/me` | `OWNER` | Your own courts, sorted by `name` |
 | `GET` | `/courts/:id` | public | Court detail including owner name and phone |
 | `GET` | `/courts/:id/availability?date=YYYY-MM-DD&durationMinutes=90` | public | Available start times for a date and booking duration (Vietnam time) |
+| `POST` | `/courts/images` | `OWNER` | Upload a real court photo (`multipart/form-data`, field `file`), returns `{ imageUrl }` |
 | `POST` | `/courts` | `OWNER` | Create a court |
 | `PATCH` | `/courts/:id` | `OWNER` | Update one of your courts |
 | `DELETE` | `/courts/:id` | `OWNER` | Delete one of your courts (see the note below) |
@@ -132,6 +138,11 @@ Notes for API consumers:
   `status` is not `CANCELLED` (`message` reports how many are left). When it
   succeeds it first deletes the `CANCELLED` bookings of that court in the same
   transaction, which keeps the `Booking.courtId` foreign key valid.
+- `Court.imageUrl` is optional and must be an `http(s)://...` URL or a path
+  starting with `/` (the value returned by `POST /courts/images`); anything else,
+  including `javascript:`, is rejected with `400`. Send `{"imageUrl": null}` on
+  `PATCH /courts/:id` to remove the photo. Courts without a photo fall back to the
+  per-sport image on the client, so `imageUrl` is never required.
 - `POST /users/become-owner` creates a court, so it applies the same schedule and
   price rules as `POST /courts`: `openTime`/`closeTime` must match `HH:mm` and
   `openTime < closeTime`, and the price must stay inside the same range. An
@@ -192,6 +203,41 @@ WHERE a."status" <> 'CANCELLED' AND b."status" <> 'CANCELLED';
 SELECT "id" FROM "Booking" WHERE "startTime" >= "endTime";
 ```
 
+### Court photos (`Court.imageUrl`)
+
+Every court can carry one real photo. Owners upload it from the court form (create,
+edit, or the first-court setup screen), which calls `POST /courts/images` and sends
+the returned `imageUrl` along with the court payload.
+
+| Piece | Behaviour |
+| --- | --- |
+| Upload | `POST /courts/images`, `multipart/form-data`, field `file`, `OWNER` only, one file per request |
+| Accepted types | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/gif`. SVG is rejected on purpose: it can carry script and would be served from the API origin |
+| Validation | MIME whitelist **plus** a magic-byte check, so a renamed file cannot be stored or served as an image |
+| Storage (Supabase) | With `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` set, objects are written to `{bucket}/courts/<uuid>.<ext>` through the Storage REST API. No `@supabase/supabase-js` dependency is needed - the API only performs an upload and a delete |
+| Storage (local) | Without those variables the file goes to `backend/uploads/courts/` and is served from `/uploads/...`. That folder is gitignored and wiped by most deploys, so it is meant for local development (and for CI, which has no Supabase credentials) |
+| Cleanup | Replacing the photo deletes the previous object, `PATCH /courts/:id` with `{"imageUrl": null}` clears it, and deleting a court deletes its photo. A storage failure is logged and never blocks the request |
+| Client side | `frontend/components/court-image.tsx` renders `next/image` over a 3-step chain: `Court.imageUrl` → per-sport Unsplash image → `public/court-fallback.svg` |
+
+`SUPABASE_STORAGE_BUCKET` (default `court-images`) must exist and be public. Create
+it once with the service role key:
+
+```bash
+curl -X POST "$SUPABASE_URL/storage/v1/bucket" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"court-images","name":"court-images","public":true}'
+```
+
+The backend logs the driver it picked at startup:
+
+```
+[Bootstrap] Court photos -> D:\...\backend\uploads (set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to use Supabase Storage)
+```
+
+`npx prisma db seed` gives each of the 10 demo courts a different photo, so the list
+no longer shows the same picture ten times.
+
 ## Frontend
 
 ```bash
@@ -205,6 +251,13 @@ pnpm dev                    # http://localhost:3001
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:3000` | Base URL of the NestJS API |
 | `NEXT_PUBLIC_USE_MOCK` | `0` | Set to `1` to serve bundled mock data instead of the API |
+
+Court photos are rendered with `next/image`, so `next.config.mjs` allows the two
+remote hosts that can serve them: `images.unsplash.com` (demo photos and the
+per-sport fallback) and `**.supabase.co` (uploads). A photo stored on the local
+disk of the API (`http://localhost:3000/uploads/...`) and the mock-mode preview
+(`blob:`) are marked `unoptimized` inside `components/court-image.tsx` instead, so
+no per-environment host has to be added to the config.
 
 ## Demo accounts
 

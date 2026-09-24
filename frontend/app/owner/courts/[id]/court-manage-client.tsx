@@ -19,6 +19,7 @@ import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
 import { bookingTotal } from '@/lib/booking-utils'
 import { courtTypeMeta } from '@/lib/court-type'
+import { CourtImage } from '@/components/court-image'
 import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
 import type { CourtDetail, OwnerBooking } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
@@ -172,10 +173,12 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
 
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span
-            className="relative flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-cover bg-center text-white"
-            style={{ backgroundImage: `url("${meta.image}"), url("/court-fallback.svg")` }}
-          >
+          <span className="relative flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-muted text-white">
+            <CourtImage
+              court={court}
+              sizes="56px"
+              className="absolute inset-0 size-full object-cover"
+            />
             <span className={`absolute inset-0 ${meta.overlay}`} />
             <Icon className="relative size-7" />
           </span>

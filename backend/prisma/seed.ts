@@ -76,6 +76,15 @@ async function main() {
     ),
   );
 
+  /**
+   * Ảnh thật cho từng sân trong seed (mỗi sân một ảnh khác nhau) để trang danh
+   * sách không còn cảnh mọi sân cùng loại dùng chung một ảnh minh hoạ.
+   * URL đã được kiểm tra trả 200; sân do người dùng tạo vẫn upload ảnh thật qua
+   * `POST /courts/images`.
+   */
+  const courtPhoto = (photoId: string) =>
+    `https://images.unsplash.com/photo-${photoId}?auto=format&fit=crop&w=1400&q=80`;
+
   const courtData = [
     [
       'Sân bóng đá Mini Cầu Giấy 1',
@@ -85,6 +94,7 @@ async function main() {
       '06:00',
       '23:00',
       0,
+      courtPhoto('1459865264687-595d652de67e'),
     ],
     [
       'Sân bóng đá Mini Cầu Giấy 2',
@@ -94,6 +104,7 @@ async function main() {
       '06:00',
       '22:00',
       0,
+      courtPhoto('1529900748604-07564a03e7a6'),
     ],
     [
       'Sân cầu lông Smash Zone',
@@ -103,6 +114,7 @@ async function main() {
       '07:00',
       '23:00',
       1,
+      courtPhoto('1626224583764-f87db24ac4ea'),
     ],
     [
       'Sân cầu lông Hoàng Mai',
@@ -112,6 +124,7 @@ async function main() {
       '06:00',
       '22:00',
       1,
+      courtPhoto('1613918431703-aa50889e3be9'),
     ],
     [
       'Tennis Lakeside',
@@ -121,6 +134,7 @@ async function main() {
       '06:00',
       '21:00',
       2,
+      courtPhoto('1531315630201-bb15abeb1653'),
     ],
     [
       'Tennis Garden 1',
@@ -130,6 +144,7 @@ async function main() {
       '07:00',
       '22:00',
       2,
+      courtPhoto('1595435934249-5df7ed86e1c0'),
     ],
     [
       'Pickleball 360',
@@ -139,6 +154,7 @@ async function main() {
       '06:00',
       '23:00',
       3,
+      courtPhoto('1612872087720-bb876e2e67d1'),
     ],
     [
       'Sân bóng rổ Hoàng Cầu',
@@ -148,6 +164,7 @@ async function main() {
       '06:00',
       '22:00',
       3,
+      courtPhoto('1504457047772-27faf1c00561'),
     ],
     [
       'Sân bóng đá Phú Đô',
@@ -157,6 +174,7 @@ async function main() {
       '05:30',
       '23:00',
       2,
+      courtPhoto('1489599849927-2ee91cede3ba'),
     ],
     [
       'Sân đa năng Tây Hồ',
@@ -166,13 +184,23 @@ async function main() {
       '06:00',
       '22:00',
       1,
+      courtPhoto('1517649763962-0c623066013b'),
     ],
   ] as const;
 
   const courts = await Promise.all(
     courtData.map(
       (
-        [name, type, address, pricePerHour, openTime, closeTime, ownerIndex],
+        [
+          name,
+          type,
+          address,
+          pricePerHour,
+          openTime,
+          closeTime,
+          ownerIndex,
+          imageUrl,
+        ],
         index,
       ) =>
         prisma.court.upsert({
@@ -184,6 +212,7 @@ async function main() {
             pricePerHour,
             openTime,
             closeTime,
+            imageUrl,
             ownerId: ownerUsers[ownerIndex].id,
           },
           create: {
@@ -194,6 +223,7 @@ async function main() {
             pricePerHour,
             openTime,
             closeTime,
+            imageUrl,
             ownerId: ownerUsers[ownerIndex].id,
           },
         }),

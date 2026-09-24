@@ -110,6 +110,7 @@ export class UsersService {
           name: dto.name,
           type: dto.type,
           address: dto.address,
+          imageUrl: dto.imageUrl,
           pricePerHour: dto.pricePerHour,
           openTime: dto.openTime,
           closeTime: dto.closeTime,

@@ -15,6 +15,24 @@ describe('validateEnv', () => {
     expect(env.JWT_EXPIRES_IN).toBe('7d');
     expect(env.CORS_ORIGIN).toBe('http://localhost:3001');
     expect(env.SWAGGER_ENABLED).toBe('true');
+    // Cấu hình ảnh sân: mặc định lưu ở đĩa, chưa bật Supabase Storage.
+    expect(env.PUBLIC_BASE_URL).toBe('http://localhost:3000');
+    expect(env.UPLOAD_MAX_BYTES).toBe(5 * 1024 * 1024);
+    expect(env.SUPABASE_STORAGE_BUCKET).toBe('court-images');
+    expect(env.SUPABASE_URL).toBeUndefined();
+    expect(env.SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
+  });
+
+  it('ép UPLOAD_MAX_BYTES từ chuỗi sang số và từ chối giá trị vô lý', () => {
+    expect(
+      validateEnv({ ...baseEnv, UPLOAD_MAX_BYTES: '2048' }).UPLOAD_MAX_BYTES,
+    ).toBe(2048);
+    expect(() => validateEnv({ ...baseEnv, UPLOAD_MAX_BYTES: 'abc' })).toThrow(
+      /UPLOAD_MAX_BYTES/,
+    );
+    expect(() =>
+      validateEnv({ ...baseEnv, UPLOAD_MAX_BYTES: '999999999' }),
+    ).toThrow(/UPLOAD_MAX_BYTES/);
   });
 
   it('ép PORT từ chuỗi sang số', () => {

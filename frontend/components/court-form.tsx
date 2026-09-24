@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock3, MapPin, Pencil, Plus, Store } from 'lucide-react'
+import { Clock3, ImagePlus, MapPin, Pencil, Plus, Store, Trash2 } from 'lucide-react'
 import { COURT_TYPE_OPTIONS, courtTypeLabel } from '@/lib/court-type'
+import { COURT_IMAGE_ACCEPT, validateCourtImageFile } from '@/lib/court-image'
 import { getErrorMessage } from '@/lib/api-error'
+import { api } from '@/lib/api'
+import { CourtImage } from '@/components/court-image'
 import type { Court, CourtInput } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,6 +37,7 @@ function toFormValues(court: Court): CourtInput {
     name: court.name,
     type: courtTypeLabel(court.type),
     address: court.address ?? '',
+    imageUrl: court.imageUrl,
     pricePerHour: Number(court.pricePerHour),
     openTime: court.openTime,
     closeTime: court.closeTime,
@@ -55,6 +59,8 @@ export function CourtForm({
     court ? toFormValues(court) : DEFAULT_VALUES
   )
   const [submitting, setSubmitting] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isEdit = Boolean(court)
 
@@ -62,8 +68,41 @@ export function CourtForm({
     setValues(prev => ({ ...prev, [key]: value }))
   }
 
+  /**
+   * Upload ngay khi chọn file để form chỉ còn giữ `imageUrl` — nhờ vậy `onSubmit`
+   * không đổi, dùng chung cho cả tạo sân, sửa sân và luồng become-owner.
+   */
+  const pickImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget
+    const file = input.files?.[0]
+    // Cho phép chọn lại đúng file vừa xoá (input không đổi giá trị thì không bắn change).
+    input.value = ''
+    if (!file) return
+
+    const invalid = validateCourtImageFile(file)
+    if (invalid) {
+      setImageError(invalid)
+      return
+    }
+
+    setImageError(null)
+    setUploadingImage(true)
+    try {
+      const { imageUrl } = await api.uploadCourtImage(file)
+      update('imageUrl', imageUrl)
+    } catch (e) {
+      setImageError(getErrorMessage(e))
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (uploadingImage) {
+      setError('Vui lòng đợi ảnh tải lên xong trước khi lưu')
+      return
+    }
     if (!values.name.trim()) {
       setError('Vui lòng nhập tên sân')
       return
@@ -180,6 +219,58 @@ export function CourtForm({
             />
           </div>
 
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="court-image" className="flex items-center gap-1.5">
+              <ImagePlus className="size-4" /> Ảnh sân
+            </Label>
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="relative aspect-[16/10] w-full max-w-64 overflow-hidden border border-border bg-muted">
+                <CourtImage
+                  court={{ type: values.type, imageUrl: values.imageUrl }}
+                  alt="Ảnh sân"
+                  sizes="256px"
+                  className="absolute inset-0 size-full object-cover"
+                />
+                {uploadingImage && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-xs font-medium text-white">
+                    Đang tải ảnh...
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Input
+                  id="court-image"
+                  className="h-11 cursor-pointer"
+                  type="file"
+                  accept={COURT_IMAGE_ACCEPT}
+                  onChange={pickImage}
+                  disabled={uploadingImage}
+                />
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG, WEBP, AVIF hoặc GIF, tối đa 5MB. Không chọn thì sân dùng
+                  ảnh minh hoạ theo loại sân.
+                </p>
+                {values.imageUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-fit"
+                    disabled={uploadingImage}
+                    onClick={() => update('imageUrl', null)}
+                  >
+                    <Trash2 /> Xoá ảnh
+                  </Button>
+                )}
+              </div>
+            </div>
+            {imageError && (
+              <p role="alert" className="text-sm text-destructive">
+                {imageError}
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="court-open" className="flex items-center gap-1.5">
@@ -210,19 +301,28 @@ export function CourtForm({
           </div>
 
           {error && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           )}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             {onCancel && (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={submitting || uploadingImage}
+              >
                 Hủy
               </Button>
             )}
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Đang lưu...' : (submitLabel ?? (isEdit ? 'Lưu thay đổi' : 'Tạo sân'))}
+            <Button type="submit" disabled={submitting || uploadingImage}>
+              {submitting
+                ? 'Đang lưu...'
+                : uploadingImage
+                  ? 'Đang tải ảnh...'
+                  : (submitLabel ?? (isEdit ? 'Lưu thay đổi' : 'Tạo sân'))}
             </Button>
           </div>
         </CardContent>

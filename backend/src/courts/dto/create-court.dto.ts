@@ -33,11 +33,29 @@ export class CreateCourtDto {
   @MaxLength(50)
   type!: string;
 
-  @ApiPropertyOptional({ example: 'Cầu Giấy, Hà Nội' })
+  @ApiPropertyOptional({
+    example: 'Cầu Giấy, Hà Nội',
+  })
   @IsString()
   @IsOptional()
   @MaxLength(255)
   address?: string;
+
+  @ApiPropertyOptional({
+    example:
+      'https://xyz.supabase.co/storage/v1/object/public/court-images/courts/a1b2.webp',
+    description:
+      'URL ảnh sân trả về từ POST /courts/images (http(s) hoặc /uploads/...); gửi null để xoá ảnh khi cập nhật',
+    maxLength: 2048,
+    nullable: true,
+  })
+  @IsString()
+  @IsOptional()
+  @MaxLength(2048)
+  @Matches(/^(https?:\/\/|\/)[^\s]*$/i, {
+    message: 'Ảnh sân phải là URL http(s) hoặc đường dẫn bắt đầu bằng "/"',
+  })
+  imageUrl?: string | null;
 
   // HTML number inputs submit strings, so coerce before validating.
   @ApiProperty({

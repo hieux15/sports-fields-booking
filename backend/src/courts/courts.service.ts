@@ -14,11 +14,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Paginated, toPaginated } from '../common/paginated';
 import { validateCourtPrice, validateCourtSchedule } from './court-validation';
+import { StorageService } from '../storage/storage.service';
 
-/**
- * Mọi thứ tự đều có tie-break thêm (`name`, rồi `id`) để phân trang ổn định:
- * hai sân cùng giá hoặc cùng tên không nhảy qua lại giữa các trang.
- */
 const COURT_ORDER_BY: Record<
   CourtSort,
   Prisma.CourtOrderByWithRelationInput[]
@@ -62,7 +59,10 @@ function buildCourtWhere(query: QueryCourtsDto): Prisma.CourtWhereInput {
 
 @Injectable()
 export class CourtsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   create(dto: CreateCourtDto, userId: string) {
     validateCourtSchedule(dto.openTime, dto.closeTime);
@@ -72,6 +72,8 @@ export class CourtsService {
         name: dto.name,
         type: dto.type,
         address: dto.address,
+        // Ảnh do chủ sân upload trước qua POST /courts/images (có thể bỏ trống).
+        imageUrl: dto.imageUrl,
         pricePerHour: dto.pricePerHour,
         openTime: dto.openTime,
         closeTime: dto.closeTime,
@@ -151,10 +153,21 @@ export class CourtsService {
     );
     validateCourtPrice(dto.pricePerHour ?? Number(court.pricePerHour));
 
-    return this.prisma.court.update({
+    const updated = await this.prisma.court.update({
       where: { id: courtId },
       data: dto,
     });
+
+    // Đổi ảnh thì dọn ảnh cũ để không để lại file mồ côi trên storage.
+    if (
+      dto.imageUrl !== undefined &&
+      court.imageUrl &&
+      court.imageUrl !== dto.imageUrl
+    ) {
+      await this.storage.removeCourtImage(court.imageUrl);
+    }
+
+    return updated;
   }
 
   async removeMyCourt(courtId: string, userId: string) {
@@ -197,6 +210,9 @@ export class CourtsService {
       });
       await tx.court.delete({ where: { id: courtId } });
     });
+
+    // Ảnh chỉ được dọn sau khi DB đã xoá xong, và không chặn kết quả trả về.
+    await this.storage.removeCourtImage(court.imageUrl);
 
     return {
       success: true,

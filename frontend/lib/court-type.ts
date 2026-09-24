@@ -13,7 +13,7 @@ export type CourtTypeMeta = {
   key: CourtTypeKey
   label: string
   icon: ComponentType<{ className?: string }>
-  /** Stable Unsplash URL mapped by sport type (stock photo until DB images exist). */
+  /** Ảnh minh hoạ theo loại sân, chỉ dùng khi sân chưa có ảnh thật (`Court.imageUrl`). */
   image: string
   /** Muted overlay class for text legibility over the photo. */
   overlay: string
@@ -33,7 +33,7 @@ const META: Record<CourtTypeKey, Omit<CourtTypeMeta, 'key'>> = {
     label: 'Cầu lông',
     icon: Volleyball,
     image:
-      'https://images.unsplash.com/photo-1626224582427-f9da3fd6c5c5?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1400&q=80',
     overlay: 'bg-black/45',
   },
   TENNIS: {
@@ -61,7 +61,7 @@ const META: Record<CourtTypeKey, Omit<CourtTypeMeta, 'key'>> = {
     label: 'Khác',
     icon: ShieldAlert,
     image:
-      'https://images.unsplash.com/photo-1461896836934-ffe607ba6851?auto=format&fit=crop&w=1400&q=80',
+      'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=1400&q=80',
     overlay: 'bg-black/50',
   },
 }
@@ -114,4 +114,17 @@ export function courtTypeMeta(type: string): CourtTypeMeta {
 
 export function courtTypeLabel(type: string): string {
   return courtTypeMeta(type).label
+}
+
+/** Sân tối thiểu để chọn ảnh — đủ cho cả `Court` lẫn `CourtDetail`. */
+export type CourtImageSource = { type: string; imageUrl?: string | null }
+
+/**
+ * Ảnh hiển thị của sân: ưu tiên ảnh thật chủ sân tải lên (`Court.imageUrl`), chỉ
+ * khi chưa có mới rơi về ảnh minh hoạ theo loại sân. Nhờ vậy mọi sân bóng đá
+ * không còn dùng chung một tấm ảnh.
+ */
+export function courtImageSource(court: CourtImageSource): string {
+  const uploaded = court.imageUrl?.trim()
+  return uploaded ? uploaded : courtTypeMeta(court.type).image
 }

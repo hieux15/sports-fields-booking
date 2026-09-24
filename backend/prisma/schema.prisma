@@ -3,53 +3,56 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String   @id @default(uuid())
+  email     String   @unique
   password  String
   name      String
   phone     String?
-  role      Role      @default(CUSTOMER)
-  createdAt DateTime  @default(now())
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
 
-  courts    Court[]   
-  bookings  Booking[] 
+  courts   Court[]
+  bookings Booking[]
 }
 
 model Court {
-  id           String   @id @default(uuid())
-  name         String  
-  type         String  
+  id           String    @id @default(uuid())
+  name         String
+  type         String
   address      String?
+  // Ảnh thật do chủ sân tải lên (Supabase Storage hoặc backend/uploads). Null
+  // nghĩa là client tự dùng ảnh minh hoạ theo loại sân.
+  imageUrl     String?
   pricePerHour Decimal
-  openTime     String   
-  closeTime    String  
+  openTime     String
+  closeTime    String
   ownerId      String
-  owner        User     @relation(fields: [ownerId], references: [id])
+  owner        User      @relation(fields: [ownerId], references: [id])
   bookings     Booking[]
 
   @@index([ownerId])
 }
 
 model Booking {
-  id        String        @id @default(uuid())
-  courtId   String
-  court     Court         @relation(fields: [courtId], references: [id])
-  userId    String
-  user      User          @relation(fields: [userId], references: [id])
-  startTime DateTime
-  endTime   DateTime
-  status    BookingStatus @default(PENDING)
+  id           String        @id @default(uuid())
+  courtId      String
+  court        Court         @relation(fields: [courtId], references: [id])
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  startTime    DateTime
+  endTime      DateTime
+  status       BookingStatus @default(PENDING)
   // Snapshot giá tại thời điểm đặt: chủ sân đổi giá sau đó cũng không ghi
   // lại được doanh thu của các đơn cũ.
   pricePerHour Decimal
   totalPrice   Decimal
-  createdAt DateTime      @default(now())
+  createdAt    DateTime      @default(now())
 
   @@index([courtId, startTime, endTime])
   // Phục vụ GET /bookings/me (lọc theo userId, sắp xếp theo startTime desc).

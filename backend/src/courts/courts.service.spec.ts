@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CourtsService } from './courts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueryCourtsDto } from './dto/query-courts.dto';
+import { StorageService } from '../storage/storage.service';
 
 describe('CourtsService', () => {
   let service: CourtsService;
@@ -22,6 +23,12 @@ describe('CourtsService', () => {
     $transaction: jest.fn(),
   };
 
+  // StorageService thật cần ConfigService; ở đây chỉ cần 2 method được gọi đúng.
+  const storage = {
+    saveCourtImage: jest.fn(),
+    removeCourtImage: jest.fn(),
+  };
+
   // $transaction chạy callback với chính mock prisma để test được các lệnh bên trong;
   // dạng mảng (findMany + count trong một transaction) thì chạy song song như Prisma.
   prisma.$transaction.mockImplementation(
@@ -33,7 +40,11 @@ describe('CourtsService', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CourtsService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CourtsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: StorageService, useValue: storage },
+      ],
     }).compile();
 
     service = module.get<CourtsService>(CourtsService);
@@ -136,7 +147,11 @@ describe('CourtsService', () => {
   });
 
   it('xóa sân kèm các đơn đã hủy khi không còn đơn chưa hủy', async () => {
-    prisma.court.findUnique.mockResolvedValue({ id: 'court-1', name: 'Sân A' });
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      name: 'Sân A',
+      imageUrl: '/uploads/courts/cu.png',
+    });
     prisma.booking.count.mockResolvedValue(0);
 
     const result = await service.removeMyCourt('court-1', 'owner-1');
@@ -147,10 +162,80 @@ describe('CourtsService', () => {
     expect(prisma.court.delete).toHaveBeenCalledWith({
       where: { id: 'court-1' },
     });
+    // Ảnh của sân cũng bị dọn khỏi storage sau khi DB xoá xong.
+    expect(storage.removeCourtImage).toHaveBeenCalledWith(
+      '/uploads/courts/cu.png',
+    );
     expect(result).toEqual({
       success: true,
       message: 'Xóa thành công sân thể thao "Sân A"',
     });
+  });
+
+  it('lưu ảnh thật của sân khi chủ sân gửi kèm imageUrl', async () => {
+    prisma.court.create.mockResolvedValue({ id: 'court-1' });
+
+    await service.create(
+      {
+        name: 'Sân A',
+        type: 'Bóng đá',
+        imageUrl: '/uploads/courts/a1b2.png',
+        pricePerHour: 200000,
+        openTime: '06:00',
+        closeTime: '22:00',
+      },
+      'owner-1',
+    );
+
+    expect(prisma.court.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          name: 'Sân A',
+          type: 'Bóng đá',
+          imageUrl: '/uploads/courts/a1b2.png',
+          pricePerHour: 200000,
+          openTime: '06:00',
+          closeTime: '22:00',
+          ownerId: 'owner-1',
+        },
+      }),
+    );
+  });
+
+  it('dọn ảnh cũ khi chủ sân tải lên ảnh khác', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      ownerId: 'owner-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+      pricePerHour: 200000,
+      imageUrl: 'https://cdn.example.com/cu.png',
+    });
+    prisma.court.update.mockResolvedValue({ id: 'court-1' });
+
+    await service.updateMyCourt('court-1', 'owner-1', {
+      imageUrl: '/uploads/courts/moi.png',
+    });
+
+    expect(storage.removeCourtImage).toHaveBeenCalledWith(
+      'https://cdn.example.com/cu.png',
+    );
+  });
+
+  it('không đụng tới ảnh khi cập nhật không gửi imageUrl', async () => {
+    prisma.court.findUnique.mockResolvedValue({
+      id: 'court-1',
+      ownerId: 'owner-1',
+      openTime: '06:00',
+      closeTime: '22:00',
+      pricePerHour: 200000,
+      imageUrl: '/uploads/courts/cu.png',
+    });
+    prisma.court.update.mockResolvedValue({ id: 'court-1' });
+
+    await service.updateMyCourt('court-1', 'owner-1', { name: 'Sân B' });
+
+    expect(storage.removeCourtImage).not.toHaveBeenCalled();
   });
 
   describe('findAll (tìm kiếm + lọc + phân trang ở database)', () => {

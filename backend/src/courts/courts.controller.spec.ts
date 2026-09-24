@@ -4,6 +4,8 @@ import { CourtsController } from './courts.controller';
 import { CourtsService } from './courts.service';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { QueryCourtsDto } from './dto/query-courts.dto';
+import { StorageService } from '../storage/storage.service';
+import type { UploadedImageFile } from '../storage/image-upload';
 
 type RequestWithUser = Parameters<CourtsController['create']>[0];
 
@@ -22,13 +24,20 @@ describe('CourtsController', () => {
     updateMyCourt: jest.fn(),
     removeMyCourt: jest.fn(),
   };
+  const storageService = {
+    saveCourtImage: jest.fn(),
+    removeCourtImage: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CourtsController],
-      providers: [{ provide: CourtsService, useValue: courtsService }],
+      providers: [
+        { provide: CourtsService, useValue: courtsService },
+        { provide: StorageService, useValue: storageService },
+      ],
     }).compile();
 
     controller = module.get<CourtsController>(CourtsController);
@@ -95,5 +104,22 @@ describe('CourtsController', () => {
       'court-1',
       'owner-1',
     );
+  });
+
+  it('ủy quyền lưu ảnh sân cho StorageService và trả về URL', async () => {
+    const file: UploadedImageFile = {
+      originalname: 'san-bong-da.png',
+      mimetype: 'image/png',
+      size: 2048,
+      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    };
+    storageService.saveCourtImage.mockResolvedValue({
+      imageUrl: '/uploads/courts/a1b2.png',
+    });
+
+    await expect(controller.uploadImage(file)).resolves.toEqual({
+      imageUrl: '/uploads/courts/a1b2.png',
+    });
+    expect(storageService.saveCourtImage).toHaveBeenCalledWith(file);
   });
 });
