@@ -20,7 +20,6 @@ import {
   hoursBetween,
   vietnamDateInputValue,
   vietnamLocalIso,
-  vietnamTimeValue,
 } from '@/lib/format'
 import type { CourtDetail } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
@@ -39,35 +38,6 @@ const DURATIONS = [
   { label: '4 giờ', minutes: 240 },
 ]
 
-const MIN_BOOKING_MINUTES = 60
-const MAX_BOOKING_MINUTES = 240
-
-function pad(value: number) {
-  return String(value).padStart(2, '0')
-}
-
-function toMinutes(time: string) {
-  const [hours, minutes] = time.split(':').map(Number)
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null
-  return hours * 60 + minutes
-}
-
-function addMinutes(time: string, minutes: number) {
-  const total = (toMinutes(time) ?? 0) + minutes
-  return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`
-}
-
-function roundToStep(time: string, step = 15) {
-  const minutes = toMinutes(time)
-  if (minutes === null) return time
-  const rounded = Math.round(minutes / step) * step
-  return `${pad(Math.floor(rounded / 60) % 24)}:${pad(rounded % 60)}`
-}
-
-function nowTimeRounded() {
-  return roundToStep(vietnamTimeValue())
-}
-
 export default function CourtDetailClient({ id }: { id: string }) {
   const { user } = useAuth()
   const router = useRouter()
@@ -75,13 +45,17 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [date, setDate] = useState('')
-  const [start, setStart] = useState('18:00')
-  const [end, setEnd] = useState('19:30')
+  const [durationMinutes, setDurationMinutes] = useState(90)
+  const [selectedStart, setSelectedStart] = useState('')
+  const [availableSlots, setAvailableSlots] = useState<{ start: string; end: string }[]>([])
+  const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   /** Bỏ qua kết quả của request cũ khi đổi sân hoặc React chạy lại effect. */
   const requestVersion = useRef(0)
+  const availabilityVersion = useRef(0)
 
   /**
    * Tách thành `load` để nút "Thử lại" gọi lại được đúng request —
@@ -113,21 +87,43 @@ export default function CourtDetailClient({ id }: { id: string }) {
     }
   }, [load])
 
+  useEffect(() => {
+    if (!court || !date) return
+    const version = ++availabilityVersion.current
+    setAvailabilityLoading(true)
+    setAvailabilityError(null)
+    setSelectedStart('')
+    api.courtAvailability(id, date, durationMinutes)
+      .then(result => {
+        if (version === availabilityVersion.current) setAvailableSlots(result.slots)
+      })
+      .catch(error => {
+        if (version === availabilityVersion.current) {
+          setAvailableSlots([])
+          setAvailabilityError(getErrorMessage(error))
+        }
+      })
+      .finally(() => {
+        if (version === availabilityVersion.current) setAvailabilityLoading(false)
+      })
+    return () => { availabilityVersion.current += 1 }
+  }, [court, date, durationMinutes, id])
+
+  const selectedSlot = availableSlots.find(slot => slot.start === selectedStart)
+  const start = selectedSlot?.start ?? ''
+  const end = selectedSlot?.end ?? ''
+
   const meta = courtTypeMeta(court?.type ?? '')
   const total = useMemo(() => {
-    if (!court || !date || !start || !end || start >= end) return 0
+    if (!court || !selectedSlot) return 0
     const startIso = vietnamLocalIso(date, start)
     const endIso = vietnamLocalIso(date, end)
     return hoursBetween(startIso, endIso) * Number(court.pricePerHour)
-  }, [court, date, start, end])
+  }, [court, date, start, end, selectedSlot])
 
   const duration = useMemo(() => {
-    if (start >= end) return 0
-    return hoursBetween(
-      vietnamLocalIso('2000-01-01', start),
-      vietnamLocalIso('2000-01-01', end)
-    )
-  }, [start, end])
+    return durationMinutes / 60
+  }, [durationMinutes])
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -137,30 +133,8 @@ export default function CourtDetailClient({ id }: { id: string }) {
       setFormError('Vui lòng chọn ngày chơi')
       return
     }
-    if (start >= end) {
-      setFormError('Thời gian bắt đầu phải trước thời gian kết thúc')
-      return
-    }
-    const durationMinutes = (toMinutes(end) ?? 0) - (toMinutes(start) ?? 0)
-    if (durationMinutes < MIN_BOOKING_MINUTES || durationMinutes > MAX_BOOKING_MINUTES) {
-      setFormError('Thời lượng đặt sân phải từ 1 đến 4 giờ')
-      return
-    }
-    const openMinutes = toMinutes(court.openTime)
-    const closeMinutes = toMinutes(court.closeTime)
-    const startMinutes = toMinutes(start)
-    const endMinutes = toMinutes(end)
-    if (openMinutes === null || closeMinutes === null) {
-      setFormError('Giờ mở cửa của sân không hợp lệ, vui lòng liên hệ chủ sân')
-      return
-    }
-    if (
-      startMinutes === null ||
-      endMinutes === null ||
-      startMinutes < openMinutes ||
-      endMinutes > closeMinutes
-    ) {
-      setFormError(`Sân hoạt động từ ${court.openTime} đến ${court.closeTime}`)
+    if (!selectedSlot) {
+      setFormError('Vui lòng chọn một khung giờ còn trống')
       return
     }
     const startIso = vietnamLocalIso(date, start)
@@ -173,7 +147,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
       await api.createBooking({
         courtId: id,
         startTime: startIso,
-        endTime: vietnamLocalIso(date, end),
+      endTime: vietnamLocalIso(date, selectedSlot.end),
       })
       toast.success('Đặt sân thành công, vui lòng chờ chủ sân xác nhận')
       router.push('/bookings')
@@ -346,63 +320,51 @@ export default function CourtDetailClient({ id }: { id: string }) {
                     />
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="booking-start">Bắt đầu</Label>
-                      <Input
-                        id="booking-start"
-                        className="h-11"
-                        type="time"
-                        min={court.openTime}
-                        max={court.closeTime}
-                        value={start}
-                        onChange={e => setStart(e.target.value)}
-                        required
-                        aria-invalid={Boolean(formError)}
-                        aria-describedby={formError ? 'booking-form-error' : undefined}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="booking-end">Kết thúc</Label>
-                      <Input
-                        id="booking-end"
-                        className="h-11"
-                        type="time"
-                        min={court.openTime}
-                        max={court.closeTime}
-                        value={end}
-                        onChange={e => setEnd(e.target.value)}
-                        required
-                        aria-invalid={Boolean(formError)}
-                        aria-describedby={formError ? 'booking-form-error' : undefined}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2">
+                    <Label>Thời lượng</Label>
+                    <div className="flex flex-wrap gap-2">
                     {DURATIONS.map(item => (
                       <Button
                         key={item.minutes}
                         type="button"
-                        variant="outline"
+                        variant={durationMinutes === item.minutes ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => setEnd(addMinutes(start, item.minutes))}
+                        aria-pressed={durationMinutes === item.minutes}
+                        onClick={() => setDurationMinutes(item.minutes)}
                       >
                         {item.label}
                       </Button>
                     ))}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const next = nowTimeRounded()
-                        setStart(next)
-                        setEnd(addMinutes(next, 90))
-                      }}
-                    >
-                      <Clock3 /> Giờ hiện tại
-                    </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Label>Khung giờ còn trống</Label>
+                    {availabilityLoading ? (
+                      <p className="text-sm text-muted-foreground">Đang tải khung giờ...</p>
+                    ) : availabilityError ? (
+                      <p role="alert" className="text-sm text-destructive">{availabilityError}</p>
+                    ) : availableSlots.length ? (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {availableSlots.map(slot => (
+                          <Button
+                            key={slot.start}
+                            type="button"
+                            size="sm"
+                            variant={selectedStart === slot.start ? 'default' : 'outline'}
+                            aria-pressed={selectedStart === slot.start}
+                            onClick={() => { setSelectedStart(slot.start); setFormError(null) }}
+                          >
+                            {slot.start}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Ngày này không còn khung giờ phù hợp.</p>
+                    )}
+                    {selectedSlot && (
+                      <p className="text-xs text-muted-foreground">{selectedSlot.start} – {selectedSlot.end}</p>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-2 border border-border/80 bg-muted/40 p-4 text-sm">
@@ -432,7 +394,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
                     </p>
                   )}
 
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting || availabilityLoading || !selectedSlot}>
                     {submitting ? 'Đang đặt sân...' : 'Xác nhận đặt sân'}
                   </Button>
                   <p className="text-xs text-muted-foreground">

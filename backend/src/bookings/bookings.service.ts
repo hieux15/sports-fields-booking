@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Prisma } from '@prisma/client';
+import { CourtAvailabilityDto } from './dto/court-availability.dto';
 
 const MIN_BOOKING_MINUTES = 60;
 const MAX_BOOKING_MINUTES = 240;
@@ -72,6 +73,57 @@ function getVietnamMinutes(date: Date): number {
 @Injectable()
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
+
+  async getCourtAvailability(courtId: string, query: CourtAvailabilityDto) {
+    const court = await this.prisma.court.findUnique({ where: { id: courtId } });
+    if (!court) throw new NotFoundException('Sân thể thao không tồn tại');
+
+    const openMinutes = toMinutesOfDay(court.openTime);
+    const closeMinutes = toMinutesOfDay(court.closeTime);
+    if (openMinutes === null || closeMinutes === null || openMinutes >= closeMinutes) {
+      throw new BadRequestException('Giờ hoạt động của sân không hợp lệ');
+    }
+
+    // Ngày và giờ hoạt động được hiểu theo múi giờ Việt Nam (UTC+7).
+    const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(query.date);
+    const calendarDate = dateMatch
+      ? new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])))
+      : null;
+    if (
+      !calendarDate ||
+      calendarDate.toISOString().slice(0, 10) !== query.date
+    ) {
+      throw new BadRequestException('Ngày không hợp lệ');
+    }
+    // midnight UTC minus seven hours represents midnight in Vietnam; comparing
+    // its UTC date directly with the input would incorrectly reject valid dates.
+    const dayStart = new Date(calendarDate.getTime() - 7 * 60 * 60 * 1000);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        courtId,
+        status: { not: 'CANCELLED' },
+        startTime: { lt: dayEnd },
+        endTime: { gt: dayStart },
+      },
+      select: { startTime: true, endTime: true },
+    });
+
+    const slots: { start: string; end: string }[] = [];
+    const now = Date.now();
+    for (let start = openMinutes; start + query.durationMinutes <= closeMinutes; start += 30) {
+      const end = start + query.durationMinutes;
+      const startTime = new Date(dayStart.getTime() + start * 60_000);
+      const endTime = new Date(dayStart.getTime() + end * 60_000);
+      if (startTime.getTime() <= now) continue;
+      if (bookings.some((booking) => booking.startTime < endTime && booking.endTime > startTime)) continue;
+      slots.push({
+        start: `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`,
+        end: `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`,
+      });
+    }
+    return { date: query.date, durationMinutes: query.durationMinutes, slots };
+  }
 
   async create(dto: CreateBookingDto, userId: string) {
     const court = await this.prisma.court.findUnique({

@@ -1,5 +1,5 @@
 import { mockBookings, mockCourts, mockUsers, courtDetail, ownerBookings } from './mock-data'
-import type { BookingInput, BookingWithCourt, Court, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, User } from './types'
+import type { BookingInput, BookingWithCourt, Court, CourtAvailability, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, User } from './types'
 import { normalizeApiError } from './api-error'
 import { clearSession, readToken } from './session'
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === '1'
@@ -104,6 +104,29 @@ export const api = {
  async courts(query: CourtQuery = {}) { if (useMock) return paginateCourts(query); return request<Paginated<Court>>(`/courts${toQueryString(query)}`) },
  async myCourts() { if (useMock) return mockCourts.filter(c => c.ownerId === currentUser().id); return request<Court[]>('/courts/me') },
  async court(id: string) { if (useMock) { const c = mockCourts.find(c => c.id === id); if (!c) throw new Error('Không tìm thấy sân thể thao này'); return courtDetail(c) } return request<CourtDetail>(`/courts/${id}`) },
+ async courtAvailability(id: string, date: string, durationMinutes: number) {
+  if (useMock) {
+   const court = mockCourts.find(item => item.id === id)
+   if (!court) throw new Error('Không tìm thấy sân thể thao này')
+   const [openHour, openMinute] = court.openTime.split(':').map(Number)
+   const [closeHour, closeMinute] = court.closeTime.split(':').map(Number)
+   const open = openHour * 60 + openMinute
+   const close = closeHour * 60 + closeMinute
+   const day = new Date(`${date}T00:00:00+07:00`)
+   const now = Date.now()
+   const slots: CourtAvailability['slots'] = []
+   for (let start = open; start + durationMinutes <= close; start += 30) {
+    const startTime = new Date(day.getTime() + start * 60_000)
+    const endTime = new Date(day.getTime() + (start + durationMinutes) * 60_000)
+    const occupied = mockBookings.some(booking => booking.courtId === id && booking.status !== 'CANCELLED' && new Date(booking.startTime) < endTime && new Date(booking.endTime) > startTime)
+    if (startTime.getTime() <= now || occupied) continue
+    const time = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+    slots.push({ start: time(start), end: time(start + durationMinutes) })
+   }
+   return { date, durationMinutes, slots }
+  }
+  return request<CourtAvailability>(`/courts/${id}/availability?${new URLSearchParams({ date, durationMinutes: String(durationMinutes) })}`)
+ },
  async createCourt(data: CourtInput) { if (useMock) { const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, ownerId: currentUser().id }; mockCourts.push(court); return court } return request<Court>('/courts', { method: 'POST', body: JSON.stringify(data) }) },
  async updateCourt(id: string, data: Partial<CourtInput>) { if (useMock) { const i = mockCourts.findIndex(c => c.id === id); mockCourts[i] = { ...mockCourts[i], ...data, pricePerHour: data.pricePerHour === undefined ? mockCourts[i].pricePerHour : String(data.pricePerHour) }; return mockCourts[i] } return request<Court>(`/courts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }) },
  async deleteCourt(id: string) { if (useMock) { const i = mockCourts.findIndex(c => c.id === id); mockCourts.splice(i, 1); return { success: true, message: 'Đã xóa sân' } } return request<{ success: true; message: string }>(`/courts/${id}`, { method: 'DELETE' }) },

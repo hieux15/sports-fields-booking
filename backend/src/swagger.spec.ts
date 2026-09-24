@@ -44,6 +44,7 @@ describe('OpenAPI document', () => {
         '/courts',
         '/courts/me',
         '/courts/{id}',
+        '/courts/{id}/availability',
         '/courts/{id}/bookings',
         '/bookings',
         '/bookings/me',

@@ -8,6 +8,7 @@ export type BookingWithCourt = Booking & { court: Court }
 export type OwnerBooking = Booking & { court: Court; user: { id: string; name: string; phone: string | null; email: string } }
 export type CourtInput = { name: string; type: string; address?: string; pricePerHour: number; openTime: string; closeTime: string }
 export type BookingInput = { courtId: string; startTime: string; endTime: string }
+export type CourtAvailability = { date: string; durationMinutes: number; slots: { start: string; end: string }[] }
 export type Session = { token: string; user: User }
 
 /** Thứ tự sắp xếp mà `GET /courts?sort=` chấp nhận. */

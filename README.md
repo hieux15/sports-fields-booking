@@ -88,6 +88,7 @@ All routes are served without an `/api` prefix. Protected routes expect
 | `GET` | `/courts` | public | Paginated list with server-side search, filters, sort and pagination |
 | `GET` | `/courts/me` | `OWNER` | Your own courts, sorted by `name` |
 | `GET` | `/courts/:id` | public | Court detail including owner name and phone |
+| `GET` | `/courts/:id/availability?date=YYYY-MM-DD&durationMinutes=90` | public | Available start times for a date and booking duration (Vietnam time) |
 | `POST` | `/courts` | `OWNER` | Create a court |
 | `PATCH` | `/courts/:id` | `OWNER` | Update one of your courts |
 | `DELETE` | `/courts/:id` | `OWNER` | Delete one of your courts (see the note below) |
