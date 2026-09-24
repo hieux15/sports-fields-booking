@@ -184,12 +184,13 @@ export class CourtsService {
       );
     }
 
-    // Chỉ cho xóa khi sân không còn đơn đặt sân đang chờ/đã xác nhận
+    // Chỉ cho xóa khi sân không còn đơn đang hiệu lực (PENDING/CONFIRMED/COMPLETED);
+    // CANCELLED và EXPIRED là đơn vô hiệu, sẽ bị xóa kèm bên dưới.
     const activeBookings = await this.prisma.booking.count({
       where: {
         courtId: courtId,
         status: {
-          not: 'CANCELLED',
+          notIn: ['CANCELLED', 'EXPIRED'],
         },
       },
     });
@@ -200,12 +201,12 @@ export class CourtsService {
       );
     }
 
-    // Xóa kèm các đơn đã hủy để không vi phạm khóa ngoại Booking.courtId
+    // Xóa kèm các đơn đã hủy/hết hạn để không vi phạm khóa ngoại Booking.courtId
     await this.prisma.$transaction(async (tx) => {
       await tx.booking.deleteMany({
         where: {
           courtId: courtId,
-          status: 'CANCELLED',
+          status: { in: ['CANCELLED', 'EXPIRED'] },
         },
       });
       await tx.court.delete({ where: { id: courtId } });

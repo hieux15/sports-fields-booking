@@ -135,9 +135,10 @@ Notes for API consumers:
 - `GET /courts/me` is declared before `GET /courts/:id`, so the literal path
   `me` is never swallowed by the `:id` parameter.
 - `DELETE /courts/:id` answers `400` while the court still has bookings whose
-  `status` is not `CANCELLED` (`message` reports how many are left). When it
-  succeeds it first deletes the `CANCELLED` bookings of that court in the same
-  transaction, which keeps the `Booking.courtId` foreign key valid.
+  `status` is neither `CANCELLED` nor `EXPIRED` (`message` reports how many are
+  left). When it succeeds it first deletes the `CANCELLED`/`EXPIRED` bookings
+  of that court in the same transaction, which keeps the `Booking.courtId`
+  foreign key valid.
 - `Court.imageUrl` is optional and must be an `http(s)://...` URL or a path
   starting with `/` (the value returned by `POST /courts/images`); anything else,
   including `javascript:`, is rejected with `400`. Send `{"imageUrl": null}` on
@@ -149,9 +150,10 @@ Notes for API consumers:
   invalid payload is rejected with `400` before the transaction starts, so a
   failed upgrade never leaves an `OWNER` account without a court.
 - `POST /bookings` answers `409` when the court already has a booking whose
-  `status` is not `CANCELLED` and whose `[startTime, endTime)` overlaps the
-  requested range. The same rule is enforced by a database constraint, so two
-  simultaneous requests cannot both succeed (see the note below).
+  `status` is neither `CANCELLED` nor `EXPIRED` and whose `[startTime, endTime)`
+  overlaps the requested range. The same rule is enforced by a database
+  constraint, so two simultaneous requests cannot both succeed (see the note
+  below).
 
 ### Booking overlap guard (database constraints)
 
@@ -162,7 +164,7 @@ friendly `409`, and PostgreSQL enforces the invariant so that any other writer
 | Object | Definition / purpose |
 | --- | --- |
 | `btree_gist` | extension created by the migration, required by the exclusion constraint |
-| `booking_no_overlap` | `EXCLUDE USING gist ("courtId" WITH =, tsrange("startTime", "endTime", '[)') WITH &&) WHERE ("status" <> 'CANCELLED')` |
+| `booking_no_overlap` | `EXCLUDE USING gist ("courtId" WITH =, tsrange("startTime", "endTime", '[)') WITH &&) WHERE ("status" NOT IN ('CANCELLED', 'EXPIRED'))` |
 | `booking_time_range_valid` | `CHECK ("startTime" < "endTime")` |
 
 Prerequisites and behaviour to keep in mind:
@@ -170,12 +172,12 @@ Prerequisites and behaviour to keep in mind:
 - `npx prisma migrate deploy` needs a role that is allowed to run
   `CREATE EXTENSION IF NOT EXISTS btree_gist`.
 - The migrations fail (and change nothing) if the data already violates the new
-  constraints, so overlapping bookings that are not `CANCELLED` (and rows with
-  `startTime >= endTime`) must be fixed before deploying.
+  constraints, so overlapping bookings that are neither `CANCELLED` nor
+  `EXPIRED` (and rows with `startTime >= endTime`) must be fixed before deploying.
 - Ranges are half-open `[startTime, endTime)`, so back-to-back bookings such as
   10:00-11:00 and 11:00-12:00 are both valid.
-- `CANCELLED` bookings are ignored by the constraint, so a cancelled slot can be
-  booked again.
+- `CANCELLED` and `EXPIRED` bookings are ignored by the constraint, so a
+  cancelled or expired slot can be booked again.
 - Prisma cannot express `EXCLUDE` in `schema.prisma`, therefore the constraints
   live in the raw SQL migrations and `prisma migrate diff` reports no drift.
 - `npm run test:e2e` includes `test/bookings.e2e-spec.ts`, which runs against the
@@ -191,17 +193,34 @@ old database is restored. Run both queries before `prisma migrate deploy`: the
 migrations fail (and change nothing) while violating rows remain.
 
 ```sql
--- Bookings that are not cancelled and overlap another booking on the same court
+-- Bookings that still hold a slot and overlap another booking on the same court
 SELECT a."id", b."id", a."courtId", a."status", b."status"
 FROM "Booking" a
 JOIN "Booking" b
   ON a."courtId" = b."courtId" AND a."id" < b."id"
  AND tsrange(a."startTime", a."endTime", '[)') && tsrange(b."startTime", b."endTime", '[)')
-WHERE a."status" <> 'CANCELLED' AND b."status" <> 'CANCELLED';
+WHERE a."status" NOT IN ('CANCELLED', 'EXPIRED')
+  AND b."status" NOT IN ('CANCELLED', 'EXPIRED');
 
 -- Invalid ranges
 SELECT "id" FROM "Booking" WHERE "startTime" >= "endTime";
 ```
+
+### Booking status lifecycle (auto-expiry cron)
+
+`BookingsScheduler` (`backend/src/bookings/bookings.scheduler.ts`) runs every
+minute through `@nestjs/schedule` (`ScheduleModule.forRoot()` in `AppModule`):
+
+- `PENDING` bookings whose `startTime` has passed become `EXPIRED`
+  automatically, so an unconfirmed booking no longer holds its slot (the
+  overlap guard ignores `EXPIRED` rows).
+- `CONFIRMED` bookings whose `endTime` has passed become `COMPLETED` — the
+  historical state that feeds the owner revenue dashboard.
+
+Both transitions are single idempotent `updateMany` statements executed in one
+transaction, so re-running (or running on several instances) is safe. The API
+additionally refuses to `confirm` a booking whose `startTime` has passed, even
+before the cron gets a chance to flip it.
 
 ### Court photos (`Court.imageUrl`)
 

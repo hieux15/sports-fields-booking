@@ -5,6 +5,7 @@ import { ArrowLeft, Ban, Clock3, MapPin, RefreshCw, Store } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
+import { isCancellableBooking } from '@/lib/booking-utils'
 import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
 import type { BookingWithCourt } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -29,7 +30,7 @@ export default function BookingDetailClient({ id }: { id: string }) {
 
   const requestVersion = useRef(0)
 
-  const canCancel = booking ? booking.status !== 'CANCELLED' && new Date(booking.startTime) > new Date() : false
+  const canCancel = booking ? isCancellableBooking(booking) : false
 
   const load = useCallback(() => {
     const version = ++requestVersion.current

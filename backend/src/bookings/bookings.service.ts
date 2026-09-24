@@ -75,19 +75,31 @@ export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
   async getCourtAvailability(courtId: string, query: CourtAvailabilityDto) {
-    const court = await this.prisma.court.findUnique({ where: { id: courtId } });
+    const court = await this.prisma.court.findUnique({
+      where: { id: courtId },
+    });
     if (!court) throw new NotFoundException('Sân thể thao không tồn tại');
 
     const openMinutes = toMinutesOfDay(court.openTime);
     const closeMinutes = toMinutesOfDay(court.closeTime);
-    if (openMinutes === null || closeMinutes === null || openMinutes >= closeMinutes) {
+    if (
+      openMinutes === null ||
+      closeMinutes === null ||
+      openMinutes >= closeMinutes
+    ) {
       throw new BadRequestException('Giờ hoạt động của sân không hợp lệ');
     }
 
     // Ngày và giờ hoạt động được hiểu theo múi giờ Việt Nam (UTC+7).
     const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(query.date);
     const calendarDate = dateMatch
-      ? new Date(Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3])))
+      ? new Date(
+          Date.UTC(
+            Number(dateMatch[1]),
+            Number(dateMatch[2]) - 1,
+            Number(dateMatch[3]),
+          ),
+        )
       : null;
     if (
       !calendarDate ||
@@ -102,7 +114,8 @@ export class BookingsService {
     const bookings = await this.prisma.booking.findMany({
       where: {
         courtId,
-        status: { not: 'CANCELLED' },
+        // CANCELLED và EXPIRED đều đã nhả slot: chỉ đơn còn hiệu lực mới chặn giờ.
+        status: { notIn: ['CANCELLED', 'EXPIRED'] },
         startTime: { lt: dayEnd },
         endTime: { gt: dayStart },
       },
@@ -111,12 +124,22 @@ export class BookingsService {
 
     const slots: { start: string; end: string }[] = [];
     const now = Date.now();
-    for (let start = openMinutes; start + query.durationMinutes <= closeMinutes; start += 30) {
+    for (
+      let start = openMinutes;
+      start + query.durationMinutes <= closeMinutes;
+      start += 30
+    ) {
       const end = start + query.durationMinutes;
       const startTime = new Date(dayStart.getTime() + start * 60_000);
       const endTime = new Date(dayStart.getTime() + end * 60_000);
       if (startTime.getTime() <= now) continue;
-      if (bookings.some((booking) => booking.startTime < endTime && booking.endTime > startTime)) continue;
+      if (
+        bookings.some(
+          (booking) =>
+            booking.startTime < endTime && booking.endTime > startTime,
+        )
+      )
+        continue;
       slots.push({
         start: `${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`,
         end: `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`,
@@ -174,8 +197,9 @@ export class BookingsService {
     const existingConflict = await this.prisma.booking.findFirst({
       where: {
         courtId: dto.courtId,
+        // CANCELLED và EXPIRED không giữ chỗ nữa: đơn hết hạn (cron) vẫn cho đặt lại.
         status: {
-          not: 'CANCELLED',
+          notIn: ['CANCELLED', 'EXPIRED'],
         },
         startTime: {
           lt: endTime,
@@ -285,6 +309,12 @@ export class BookingsService {
     if (booking.status === 'CANCELLED') {
       throw new BadRequestException('Đơn đặt sân này đã được hủy trước đó');
     }
+    if (booking.status === 'EXPIRED') {
+      throw new BadRequestException('Đơn đặt sân này đã hết hạn chờ xác nhận');
+    }
+    if (booking.status === 'COMPLETED') {
+      throw new BadRequestException('Đơn đặt sân này đã hoàn thành');
+    }
     if (booking.startTime <= new Date()) {
       throw new BadRequestException(
         'Không thể hủy đơn đặt sân đã bắt đầu hoặc đã qua',
@@ -311,9 +341,19 @@ export class BookingsService {
         'Không tìm thấy đơn đặt sân này hoặc bạn không có quyền xác nhận',
       );
     }
+    if (booking.status === 'EXPIRED') {
+      throw new BadRequestException('Đơn đặt sân này đã hết hạn chờ xác nhận');
+    }
     if (booking.status !== 'PENDING') {
       throw new BadRequestException(
         'Chỉ có thể xác nhận đơn đặt sân đang chờ xác nhận',
+      );
+    }
+    // Cron chạy mỗi phút nên có thể chưa kịp chuyển trạng thái; không xác nhận
+    // một đơn đã qua giờ bắt đầu.
+    if (booking.startTime <= new Date()) {
+      throw new BadRequestException(
+        'Đơn đặt sân đã qua giờ bắt đầu, không thể xác nhận',
       );
     }
     return this.prisma.booking.update({

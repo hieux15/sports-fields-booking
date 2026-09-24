@@ -1,5 +1,5 @@
 export type Role = 'OWNER' | 'CUSTOMER'
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED'
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'EXPIRED' | 'COMPLETED'
 export type User = { id: string; email: string; name: string; phone: string | null; role: Role; createdAt: string }
 export type Court = { id: string; name: string; type: string; address: string | null; imageUrl: string | null; pricePerHour: string; openTime: string; closeTime: string; ownerId: string }
 export type CourtDetail = Court & { owner: { name: string; phone: string | null } }
@@ -34,7 +34,7 @@ export type Paginated<T> = {
   totalPages: number
 }
 export const COURT_TYPES = ['Bóng đá', 'Cầu lông', 'Tennis', 'Pickleball', 'Bóng rổ', 'Khác']
-export const BOOKING_STATUSES: BookingStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED']
+export const BOOKING_STATUSES: BookingStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED', 'EXPIRED', 'COMPLETED']
 
 export function isOwner(user: User | null): boolean { return user?.role === 'OWNER' }
 export function isCustomer(user: User | null): boolean { return user?.role === 'CUSTOMER' }

@@ -68,4 +68,8 @@ enum BookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  // Đơn PENDING quá giờ bắt đầu mà chủ sân chưa xác nhận (cron tự chuyển).
+  EXPIRED
+  // Đơn CONFIRMED đã qua giờ kết thúc — lịch sử doanh thu (cron tự chuyển).
+  COMPLETED
 }

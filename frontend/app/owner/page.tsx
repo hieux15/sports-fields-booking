@@ -263,7 +263,7 @@ export default function OwnerPage() {
               <span className="text-muted-foreground">đơn đã xác nhận</span>
             </span>
             <span className="text-muted-foreground">
-              Doanh thu đã xác nhận:{' '}
+              Doanh thu ghi nhận (xác nhận + hoàn thành):{' '}
               <strong className="text-foreground">{formatVND(stats.revenue)}</strong>
             </span>
           </div>

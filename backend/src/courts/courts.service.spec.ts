@@ -146,7 +146,7 @@ describe('CourtsService', () => {
     expect(prisma.court.delete).not.toHaveBeenCalled();
   });
 
-  it('xóa sân kèm các đơn đã hủy khi không còn đơn chưa hủy', async () => {
+  it('xóa sân kèm các đơn đã hủy/hết hạn khi không còn đơn hiệu lực', async () => {
     prisma.court.findUnique.mockResolvedValue({
       id: 'court-1',
       name: 'Sân A',
@@ -156,8 +156,14 @@ describe('CourtsService', () => {
 
     const result = await service.removeMyCourt('court-1', 'owner-1');
 
+    expect(prisma.booking.count).toHaveBeenCalledWith({
+      where: {
+        courtId: 'court-1',
+        status: { notIn: ['CANCELLED', 'EXPIRED'] },
+      },
+    });
     expect(prisma.booking.deleteMany).toHaveBeenCalledWith({
-      where: { courtId: 'court-1', status: 'CANCELLED' },
+      where: { courtId: 'court-1', status: { in: ['CANCELLED', 'EXPIRED'] } },
     });
     expect(prisma.court.delete).toHaveBeenCalledWith({
       where: { id: 'court-1' },

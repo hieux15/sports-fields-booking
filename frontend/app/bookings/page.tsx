@@ -5,7 +5,7 @@ import { Ban, CalendarDays, Clock3, MapPin, RefreshCw, Search, Store, ArrowRight
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
-import { bookingTotal, isActiveBooking, isUpcomingBooking } from '@/lib/booking-utils'
+import { bookingTotal, isCancellableBooking, isActiveBooking, isUpcomingBooking } from '@/lib/booking-utils'
 import { formatDate, formatTimeRange, formatVND } from '@/lib/format'
 import type { BookingStatus, BookingWithCourt } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
@@ -29,7 +29,9 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ xác nhận' },
   { key: 'CONFIRMED', label: 'Đã xác nhận' },
+  { key: 'COMPLETED', label: 'Đã hoàn thành' },
   { key: 'CANCELLED', label: 'Đã hủy' },
+  { key: 'EXPIRED', label: 'Đã hết hạn' },
 ]
 
 const BOOKING_GROUPS = [
@@ -101,8 +103,7 @@ export default function BookingsPage() {
     [items]
   )
 
-  const canCancel = (booking: BookingWithCourt) =>
-    booking.status !== 'CANCELLED' && new Date(booking.startTime) > new Date()
+  const canCancel = (booking: BookingWithCourt) => isCancellableBooking(booking)
 
   const confirmCancel = async () => {
     if (!cancelling) return

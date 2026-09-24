@@ -258,6 +258,13 @@ async function main() {
     [7, 1, 5, 20, BookingStatus.CONFIRMED],
     [8, 2, 6, 18, BookingStatus.PENDING],
     [9, 3, 7, 19, BookingStatus.CONFIRMED],
+    // Dòng quá khứ (dayOffset âm): lịch sử COMPLETED/EXPIRED để dashboard
+    // doanh thu có dữ liệu ngay sau khi seed (cron cũng tự sinh các trạng thái này).
+    [0, 1, -1, 20, BookingStatus.COMPLETED],
+    [1, 2, -2, 18, BookingStatus.COMPLETED],
+    [2, 3, -3, 19, BookingStatus.COMPLETED],
+    [3, 4, -1, 15, BookingStatus.EXPIRED],
+    [4, 5, -2, 21, BookingStatus.CANCELLED],
   ] as const;
 
   await Promise.all(

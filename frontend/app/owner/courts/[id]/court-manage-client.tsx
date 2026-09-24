@@ -17,7 +17,7 @@ import {
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
-import { bookingTotal } from '@/lib/booking-utils'
+import { bookingTotal, isConfirmedBooking } from '@/lib/booking-utils'
 import { courtTypeMeta } from '@/lib/court-type'
 import { CourtImage } from '@/components/court-image'
 import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
@@ -69,10 +69,11 @@ export default function CourtManageClient({ id }: { id: string }) {
       total: bookings.length,
       pending: bookings.filter(item => item.status === 'PENDING').length,
       confirmed: bookings.filter(item => item.status === 'CONFIRMED').length,
+      // COMPLETED = đơn đã qua giờ kết thúc: lịch sử làm nên doanh thu ghi nhận.
+      completed: bookings.filter(item => item.status === 'COMPLETED').length,
       cancelled: bookings.filter(item => item.status === 'CANCELLED').length,
-      revenue: bookings
-        .filter(item => item.status === 'CONFIRMED')
-        .reduce((sum, item) => sum + bookingTotal(item), 0),
+      expired: bookings.filter(item => item.status === 'EXPIRED').length,
+      revenue: bookings.filter(isConfirmedBooking).reduce((sum, item) => sum + bookingTotal(item), 0),
     }),
     [bookings]
   )
@@ -223,8 +224,13 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
           <strong className="text-emerald-700">{stats.confirmed}</strong>{' '}
           <span className="text-muted-foreground">đã xác nhận</span>
         </span>
+        <span>
+          <strong className="text-sky-700">{stats.completed}</strong>{' '}
+          <span className="text-muted-foreground">đã hoàn thành</span>
+        </span>
         <span className="text-muted-foreground">
-          Doanh thu đã xác nhận: <strong className="text-foreground">{formatVND(stats.revenue)}</strong>
+          Doanh thu ghi nhận (xác nhận + hoàn thành):{' '}
+          <strong className="text-foreground">{formatVND(stats.revenue)}</strong>
         </span>
       </div>
 
@@ -307,7 +313,7 @@ function BookingRow({
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
         <span className="font-semibold text-primary">{formatVND(bookingTotal(booking))}</span>
-        {booking.status !== 'CANCELLED' && (
+        {(booking.status === 'PENDING' || booking.status === 'CONFIRMED') && (
           <div className="flex gap-2">
             {booking.status === 'PENDING' && (
               <Button size="sm" onClick={() => onAction(booking, 'confirm')} disabled={isConfirming}>

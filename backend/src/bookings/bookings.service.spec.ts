@@ -146,12 +146,12 @@ describe('BookingsService', () => {
 
     await service.create(validBooking, 'user-1');
 
-    // status <> CANCELLED: đơn đã hủy không chặn đơn mới.
+    // CANCELLED và EXPIRED: đơn đã hủy/hết hạn không chặn đơn mới.
     // startTime < endTime mới và endTime > startTime mới: khung giờ liền kề vẫn hợp lệ.
     expect(prisma.booking.findFirst).toHaveBeenCalledWith({
       where: {
         courtId: 'court-1',
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'EXPIRED'] },
         startTime: { lt: new Date('2027-01-15T14:00:00.000Z') },
         endTime: { gt: new Date('2027-01-15T13:00:00.000Z') },
       },
