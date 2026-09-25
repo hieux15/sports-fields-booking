@@ -17,6 +17,7 @@ export const COURT_SORT_OPTIONS = [
   'name_desc',
   'price_asc',
   'price_desc',
+  'rating_desc',
 ] as const;
 
 export type CourtSort = (typeof COURT_SORT_OPTIONS)[number];

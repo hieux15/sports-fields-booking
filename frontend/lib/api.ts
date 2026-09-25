@@ -1,5 +1,5 @@
 import { mockBookings, mockCourts, mockUsers, courtDetail, ownerBookings } from './mock-data'
-import type { BookingInput, BookingWithCourt, Court, CourtAvailability, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, User } from './types'
+import type { BookingInput, BookingWithCourt, Court, CourtAvailability, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, Review, User } from './types'
 import { normalizeApiError } from './api-error'
 import { clearSession, readToken } from './session'
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === '1'
@@ -81,6 +81,8 @@ function paginateCourts(query: CourtQuery): Paginated<Court> {
         return Number(a.pricePerHour) - Number(b.pricePerHour)
       case 'price_desc':
         return Number(b.pricePerHour) - Number(a.pricePerHour)
+      case 'rating_desc':
+        return (b.avgRating ?? -1) - (a.avgRating ?? -1)
       case 'name_desc':
         return b.name.localeCompare(a.name)
       default:
@@ -101,7 +103,7 @@ export const api = {
 
  async login(email: string, password: string) { if (useMock) { const user = mockUsers.find(u => u.email === email); if (!user || password !== '123456') throw new Error('Email hoặc mật khẩu không đúng'); return { access_token: `mock-${user.id}` } } return request<{ access_token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }) },
  async register(data: { email: string; password: string; name: string }) { if (useMock) { if (mockUsers.some(u => u.email === data.email)) throw new Error('Email đã được sử dụng'); const user: User = { id: `mock-user-${Date.now()}`, email: data.email, name: data.name, phone: null, role: 'CUSTOMER', createdAt: new Date().toISOString() }; mockUsers.push(user); return user } return request<User>('/auth/register', { method: 'POST', body: JSON.stringify(data) }) },
- async becomeOwner(data: CourtInput) { if (useMock) { const user = { ...currentUser(), role: 'OWNER' as const }; const index = mockUsers.findIndex(item => item.id === user.id); if (index >= 0) mockUsers[index] = user; localStorage.setItem('sfb_user', JSON.stringify(user)); const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, imageUrl: data.imageUrl ?? null, ownerId: user.id }; mockCourts.push(court); return { user, court } } return request<{ user: User; court: Court }>('/users/become-owner', { method: 'POST', body: JSON.stringify(data) }) },
+  async becomeOwner(data: CourtInput) { if (useMock) { const user = { ...currentUser(), role: 'OWNER' as const }; const index = mockUsers.findIndex(item => item.id === user.id); if (index >= 0) mockUsers[index] = user; localStorage.setItem('sfb_user', JSON.stringify(user)); const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, imageUrl: data.imageUrl ?? null, ownerId: user.id, avgRating: null, reviews: [] }; mockCourts.push(court); return { user, court } } return request<{ user: User; court: Court }>('/users/become-owner', { method: 'POST', body: JSON.stringify(data) }) },
  async me() { if (useMock) return currentUser(); return request<User>('/users/me') },
  async updateMe(data: { name?: string; phone?: string }) { if (useMock) { const user = { ...currentUser(), ...data }; localStorage.setItem('sfb_user', JSON.stringify(user)); return user } return request<User>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }) },
  async courts(query: CourtQuery = {}) { if (useMock) return paginateCourts(query); return request<Paginated<Court>>(`/courts${toQueryString(query)}`) },
@@ -130,7 +132,7 @@ export const api = {
   }
   return request<CourtAvailability>(`/courts/${id}/availability?${new URLSearchParams({ date, durationMinutes: String(durationMinutes) })}`)
  },
- async createCourt(data: CourtInput) { if (useMock) { const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, imageUrl: data.imageUrl ?? null, ownerId: currentUser().id }; mockCourts.push(court); return court } return request<Court>('/courts', { method: 'POST', body: JSON.stringify(data) }) },
+  async createCourt(data: CourtInput) { if (useMock) { const court = { ...data, id: `court-${Date.now()}`, pricePerHour: String(data.pricePerHour), address: data.address || null, imageUrl: data.imageUrl ?? null, ownerId: currentUser().id, avgRating: null, reviews: [] }; mockCourts.push(court); return court } return request<Court>('/courts', { method: 'POST', body: JSON.stringify(data) }) },
  async updateCourt(id: string, data: Partial<CourtInput>) { if (useMock) { const i = mockCourts.findIndex(c => c.id === id); mockCourts[i] = { ...mockCourts[i], ...data, pricePerHour: data.pricePerHour === undefined ? mockCourts[i].pricePerHour : String(data.pricePerHour), imageUrl: data.imageUrl === undefined ? mockCourts[i].imageUrl : data.imageUrl }; return mockCourts[i] } return request<Court>(`/courts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }) },
  async deleteCourt(id: string) { if (useMock) { const i = mockCourts.findIndex(c => c.id === id); mockCourts.splice(i, 1); return { success: true, message: 'Đã xóa sân' } } return request<{ success: true; message: string }>(`/courts/${id}`, { method: 'DELETE' }) },
  /**
@@ -144,5 +146,9 @@ export const api = {
   async myBookings() { if (useMock) return mockBookings.filter(b => b.userId === currentUser().id); return request<BookingWithCourt[]>('/bookings/me') },
  async cancelBooking(id: string) { if (useMock) { const b = mockBookings.find(b => b.id === id); if (!b) throw new Error('Không tìm thấy đơn'); b.status = 'CANCELLED'; return b } return request<BookingWithCourt>(`/bookings/${id}/cancel`, { method: 'PATCH' }) },
  async confirmBooking(id: string) { if (useMock) { const b = mockBookings.find(b => b.id === id); if (!b) throw new Error('Không tìm thấy đơn'); b.status = 'CONFIRMED'; return b } return request<BookingWithCourt>(`/bookings/${id}/confirm`, { method: 'PATCH' }) },
- async courtBookings(id: string) { if (useMock) return ownerBookings(id); return request<OwnerBooking[]>(`/courts/${id}/bookings`) },
+  async courtBookings(id: string) { if (useMock) return ownerBookings(id); return request<OwnerBooking[]>(`/courts/${id}/bookings`) },
+  async courtReviews(id: string) { if (useMock) { const court = mockCourts.find(c => c.id === id); if (!court) throw new Error('Không tìm thấy sân thể thao này'); return court.reviews } return request<Review[]>(`/courts/${id}/reviews`) },
+  async createReview(courtId: string, rating: number, comment?: string) { if (useMock) { const user = currentUser(); const review: Review = { id: `review-${Date.now()}`, userId: user.id, courtId, rating, comment: comment || null, userName: user.name, createdAt: new Date().toISOString() }; const court = mockCourts.find(c => c.id === courtId); if (!court) throw new Error('Không tìm thấy sân thể thao này'); court.reviews.unshift(review); const ratings = court.reviews.map(r => r.rating); court.avgRating = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : null; return review } return request<Review>(`/courts/${courtId}/reviews`, { method: 'POST', body: JSON.stringify({ rating, comment }) }) },
+  async updateReview(reviewId: string, rating: number, comment?: string) { if (useMock) { let found: Review | undefined; for (const court of mockCourts) { const r = court.reviews.find(x => x.id === reviewId); if (r) { found = r; r.rating = rating; if (comment !== undefined) r.comment = comment; break } } if (!found) throw new Error('Không tìm thấy đánh giá'); return found } return request<Review>(`/reviews/${reviewId}`, { method: 'PATCH', body: JSON.stringify({ rating, comment }) }) },
+  async deleteReview(reviewId: string) { if (useMock) { for (const court of mockCourts) { const idx = court.reviews.findIndex(x => x.id === reviewId); if (idx >= 0) { court.reviews.splice(idx, 1); const ratings = court.reviews.map(r => r.rating); court.avgRating = ratings.length ? Number((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : null; return { success: true } } } throw new Error('Không tìm thấy đánh giá') } return request<{ success: true }>(`/reviews/${reviewId}`, { method: 'DELETE' }) },
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, Clock3, MapPin } from 'lucide-react'
+import { ArrowUpRight, Clock3, MapPin, Star } from 'lucide-react'
 import { courtTypeMeta } from '@/lib/court-type'
 import { CourtImage } from '@/components/court-image'
 import { formatVND } from '@/lib/format'
@@ -51,6 +51,12 @@ export function CourtCard({
                 Mở cửa {court.openTime} – {court.closeTime}
               </span>
             </p>
+            {court.avgRating !== null && Number(court.avgRating) > 0 ? (
+              <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-primary">
+                <Star className="size-4 shrink-0" />
+                <span>{Number(court.avgRating).toFixed(1)}</span>
+              </p>
+            ) : null}
           </div>
 
           <div className="flex items-end justify-between gap-3">

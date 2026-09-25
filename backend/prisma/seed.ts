@@ -295,8 +295,61 @@ async function main() {
     ),
   );
 
+  const reviewData = [
+    [0, 0, 5, 'Sân đẹp, giá tốt'],
+    [0, 2, 4, 'Cỏ tốt, không bị lầy'],
+    [0, 4, 4],
+    [1, 1, 4, 'Sân rộng, thoáng mát'],
+    [1, 3, 3, 'Cần khắc phục hệ thống thoát nước'],
+    [2, 2, 5, 'Sân đẹp, đèn sáng, rất thích'],
+    [2, 0, 4, 'Giá hợp lý'],
+    [4, 5, 5, 'Mặt sân đẹp, dịch vụ tốt'],
+    [4, 2, 5],
+    [4, 3, 4, 'Cần thêm bóng nước uống'],
+    [6, 1, 4, 'Sân mới, sạch sẽ'],
+    [6, 4, 3, 'Wifi yếu'],
+    [8, 0, 5, 'Sân đẹp nhất khu vực'],
+    [8, 6, 4],
+    [9, 3, 4, 'Giá hợp lý, nhân viên thân thiện'],
+  ] as const;
+
+  await Promise.all(
+    reviewData.map(([courtIndex, customerIndex, rating, comment], index) =>
+      prisma.review.upsert({
+        where: { id: `seed-review-${index + 1}` },
+        update: {
+          userId: customerUsers[customerIndex].id,
+          courtId: courts[courtIndex].id,
+          rating,
+          comment: comment ?? undefined,
+        },
+        create: {
+          id: `seed-review-${index + 1}`,
+          userId: customerUsers[customerIndex].id,
+          courtId: courts[courtIndex].id,
+          rating,
+          comment: comment ?? undefined,
+        },
+      }),
+    ),
+  );
+
+  await prisma.$transaction(
+    courts.map((court, courtIndex) => {
+      const courtReviews = reviewData.filter((r) => r[0] === courtIndex);
+      const avg =
+        courtReviews.length > 0
+          ? courtReviews.reduce((sum, r) => sum + r[2], 0) / courtReviews.length
+          : null;
+      return prisma.court.update({
+        where: { id: court.id },
+        data: { avgRating: avg ? Number(avg.toFixed(1)) : null },
+      });
+    }),
+  );
+
   console.log(
-    `Seed complete: ${ownerUsers.length} owners, ${customerUsers.length} customers, ${courts.length} courts, ${bookingData.length} bookings.`,
+    `Seed complete: ${ownerUsers.length} owners, ${customerUsers.length} customers, ${courts.length} courts, ${bookingData.length} bookings, ${reviewData.length} reviews.`,
   );
 }
 

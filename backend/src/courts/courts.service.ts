@@ -25,6 +25,7 @@ const COURT_ORDER_BY: Record<
   name_desc: [{ name: 'desc' }, { id: 'asc' }],
   price_asc: [{ pricePerHour: 'asc' }, { name: 'asc' }, { id: 'asc' }],
   price_desc: [{ pricePerHour: 'desc' }, { name: 'asc' }, { id: 'asc' }],
+  rating_desc: [{ avgRating: { sort: 'desc', nulls: 'last' } }, { id: 'asc' }],
 };
 
 /** Dựng điều kiện WHERE từ query string, tất cả đều lọc ở database. */
@@ -136,6 +137,16 @@ export class CourtsService {
             phone: true,
           },
         },
+        reviews: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -143,7 +154,18 @@ export class CourtsService {
       throw new NotFoundException('Không tìm thấy sân thể thao này');
     }
 
-    return court;
+    return {
+      ...court,
+      reviews: court.reviews.map((review) => ({
+        id: review.id,
+        userId: review.userId,
+        courtId: review.courtId,
+        rating: review.rating,
+        comment: review.comment,
+        userName: review.user.name,
+        createdAt: review.createdAt.toISOString(),
+      })),
+    };
   }
 
   async updateMyCourt(courtId: string, userId: string, dto: UpdateCourtDto) {

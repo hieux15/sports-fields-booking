@@ -10,6 +10,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { UsersModule } from './users/users.module';
 import { CourtsModule } from './courts/courts.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { HealthModule } from './health/health.module';
 import { StorageModule } from './storage/storage.module';
 import { validateEnv } from './config/env.validation';
@@ -28,6 +29,7 @@ import { validateEnv } from './config/env.validation';
     UsersModule,
     CourtsModule,
     BookingsModule,
+    ReviewsModule,
     HealthModule,
     StorageModule,
   ],

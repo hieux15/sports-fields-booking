@@ -30,6 +30,7 @@ const SORT_OPTIONS: { value: CourtSort; label: string }[] = [
   { value: 'name_asc', label: 'Tên A → Z' },
   { value: 'price_asc', label: 'Giá thấp → cao' },
   { value: 'price_desc', label: 'Giá cao → thấp' },
+  { value: 'rating_desc', label: 'Đánh giá cao → thấp' },
 ]
 
 /** Số sân mỗi trang. */

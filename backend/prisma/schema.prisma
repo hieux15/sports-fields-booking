@@ -19,6 +19,7 @@ model User {
 
   courts   Court[]
   bookings Booking[]
+  reviews  Review[]
 }
 
 model Court {
@@ -37,6 +38,8 @@ model Court {
   ownerId      String
   owner        User      @relation(fields: [ownerId], references: [id])
   bookings     Booking[]
+  reviews      Review[]
+  avgRating    Float?
 
   @@index([ownerId])
 }
@@ -59,6 +62,20 @@ model Booking {
   @@index([courtId, startTime, endTime])
   // Phục vụ GET /bookings/me (lọc theo userId, sắp xếp theo startTime desc).
   @@index([userId, startTime])
+}
+
+model Review {
+  id        String    @id @default(uuid())
+  rating    Int
+  comment   String?
+  userId    String
+  courtId   String
+  createdAt DateTime @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  court     Court     @relation(fields: [courtId], references: [id])
+
+  @@unique([userId, courtId])
+  @@index([courtId])
 }
 
 enum Role {

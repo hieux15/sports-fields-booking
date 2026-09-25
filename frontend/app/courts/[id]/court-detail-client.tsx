@@ -11,6 +11,7 @@ import {
   Phone,
   RefreshCw,
   Store,
+  Star,
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
@@ -53,6 +54,14 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const [availabilityError, setAvailabilityError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [reviews, setReviews] = useState<{ id: string; rating: number; comment: string | null; userName: string; createdAt: string }[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+  const [myReviewId, setMyReviewId] = useState<string | null>(null)
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null)
 
   /** Bỏ qua kết quả của request cũ khi đổi sân hoặc React chạy lại effect. */
   const requestVersion = useRef(0)
@@ -110,6 +119,20 @@ export default function CourtDetailClient({ id }: { id: string }) {
     return () => { availabilityVersion.current += 1 }
   }, [court, date, durationMinutes, id])
 
+  useEffect(() => {
+    if (!court) return
+    setReviewsLoading(true)
+    api.courtReviews(court.id)
+      .then(data => {
+        setReviews(data)
+        const mine = data.find(r => r.userId === user?.id)
+        setMyReviewId(mine?.id ?? null)
+      })
+      .catch(() => setReviews([]))
+      .finally(() => setReviewsLoading(false))
+  }, [court, user?.id])
+
+
   const selectedSlot = availableSlots.find(slot => slot.start === selectedStart)
   const start = selectedSlot?.start ?? ''
   const end = selectedSlot?.end ?? ''
@@ -156,6 +179,29 @@ export default function CourtDetailClient({ id }: { id: string }) {
       setFormError(getErrorMessage(e))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const submitReview = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!court || !user) return
+    setReviewError(null)
+    try {
+      if (editingReviewId) {
+        const updated = await api.updateReview(editingReviewId, reviewRating, reviewComment || undefined)
+        setReviews(prev => prev.map(r => r.id === updated.id ? updated : r))
+        setEditingReviewId(null)
+      } else {
+        const review = await api.createReview(court.id, reviewRating, reviewComment || undefined)
+        setReviews(prev => [review, ...prev])
+        setMyReviewId(review.id)
+      }
+      setReviewComment('')
+      setReviewRating(5)
+    } catch (e) {
+      setReviewError(getErrorMessage(e))
+    } finally {
+      setReviewSubmitting(false)
     }
   }
 
@@ -400,6 +446,84 @@ export default function CourtDetailClient({ id }: { id: string }) {
               )}
             </CardContent>
           </Card>
+
+          {/* Reviews section */}
+          <div className="flex flex-col gap-4">
+            <h2 className="text-xl font-bold tracking-tight">Đánh giá sân</h2>
+            {reviewsLoading ? (
+              <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
+            ) : reviews.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Chưa có đánh giá nào cho sân này.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {reviews.map(review => (
+                  <div key={review.id} className="border-b border-border/80 pb-4 last:border-b-0">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-foreground">{review.userName}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    <div className="mt-1 flex items-center gap-1 text-sm text-primary">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star key={i} className={`size-4 ${i < review.rating ? 'fill-current' : 'opacity-30'}`} />
+                      ))}
+                    </div>
+                    {review.comment && <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {user && (
+              <div className="mt-2">
+                {editingReviewId ? (
+                  <form onSubmit={submitReview} className="flex flex-col gap-3">
+                    <p className="text-sm font-semibold">Chỉnh sửa đánh giá</p>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
+                          <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      className="min-h-[80px] rounded-md border border-border bg-background p-2 text-sm"
+                      placeholder="Nhận xét của bạn (tuỳ chọn)"
+                      value={reviewComment}
+                      onChange={e => setReviewComment(e.target.value)}
+                    />
+                    {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang lưu...' : 'Lưu'}</Button>
+                      <Button type="button" variant="outline" onClick={() => { setEditingReviewId(null); setReviewComment(''); setReviewRating(5); }}>Hủy</Button>
+                    </div>
+                  </form>
+                ) : myReviewId ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => { const r = reviews.find(x => x.id === myReviewId); if (r) { setEditingReviewId(myReviewId); setReviewRating(r.rating); setReviewComment(r.comment || '') } }}>Chỉnh sửa đánh giá</Button>
+                  </div>
+                ) : (
+                  <form onSubmit={submitReview} className="flex flex-col gap-3">
+                    <p className="text-sm font-semibold">Đánh giá sân của bạn</p>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
+                          <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      className="min-h-[80px] rounded-md border border-border bg-background p-2 text-sm"
+                      placeholder="Nhận xét của bạn (tuỳ chọn)"
+                      value={reviewComment}
+                      onChange={e => setReviewComment(e.target.value)}
+                    />
+                    {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
+                    <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}</Button>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
