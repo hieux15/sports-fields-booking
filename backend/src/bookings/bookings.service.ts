@@ -252,6 +252,26 @@ export class BookingsService {
     });
     return bookings;
   }
+
+  // Lấy toàn bộ đơn của các sân do chủ sân đang đăng nhập sở hữu.
+  async findAllForOwner(ownerId: string) {
+    return this.prisma.booking.findMany({
+      where: { court: { ownerId } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+          },
+        },
+        court: true,
+      },
+      orderBy: { startTime: 'desc' },
+    });
+  }
+
   // Lấy danh sách đơn đặt sân của một sân thuộc chủ sân đang đăng nhập
   async findByCourt(courtId: string, userId: string) {
     const court = await this.prisma.court.findUnique({

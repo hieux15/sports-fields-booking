@@ -101,6 +101,7 @@ All routes are served without an `/api` prefix. Protected routes expect
 | `GET` | `/courts/:id/bookings` | `OWNER` | Bookings of one of your courts |
 | `POST` | `/bookings` | `CUSTOMER` | Create a booking |
 | `GET` | `/bookings/me` | `CUSTOMER` | Your bookings, each with its court |
+| `GET` | `/bookings/owner` | `OWNER` | All bookings for every court you own, with court and customer details |
 | `GET` | `/bookings/:id` | `CUSTOMER` | One of your bookings |
 | `PATCH` | `/bookings/:id/cancel` | `CUSTOMER` / `OWNER` | Cancel a booking |
 | `PATCH` | `/bookings/:id/confirm` | `OWNER` | Confirm a booking made on one of your courts |

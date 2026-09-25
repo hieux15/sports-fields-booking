@@ -36,19 +36,10 @@ export default function OwnerPage() {
     if (!user || user.role !== 'OWNER') return
     setLoading(true)
     setError(null)
-    api
-      .myCourts()
-      .then(async list => {
+    Promise.all([api.myCourts(), api.ownerBookings()])
+      .then(([list, ownerBookings]) => {
         setCourts(list)
-        const groups = await Promise.all(
-          list.map(court =>
-            api
-              .courtBookings(court.id)
-              .then(items => items)
-              .catch(() => [] as OwnerBooking[])
-          )
-        )
-        setBookings(groups.flat())
+        setBookings(ownerBookings)
       })
       .catch(e => setError(getErrorMessage(e)))
       .finally(() => setLoading(false))

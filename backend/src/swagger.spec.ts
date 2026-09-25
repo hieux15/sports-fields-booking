@@ -49,6 +49,7 @@ describe('OpenAPI document', () => {
         '/courts/{id}/bookings',
         '/bookings',
         '/bookings/me',
+        '/bookings/owner',
         '/bookings/{id}',
         '/bookings/{id}/cancel',
         '/bookings/{id}/confirm',
@@ -62,6 +63,9 @@ describe('OpenAPI document', () => {
       { 'access-token': [] },
     ]);
     expect(document.paths['/bookings']?.post?.security).toEqual([
+      { 'access-token': [] },
+    ]);
+    expect(document.paths['/bookings/owner']?.get?.security).toEqual([
       { 'access-token': [] },
     ]);
     expect(document.paths['/courts/{id}/bookings']?.get?.security).toEqual([

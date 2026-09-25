@@ -75,6 +75,14 @@ export class BookingsController {
     return this.bookingsService.findAll(req.user.id);
   }
 
+  @Get('owner')
+  @Roles(Role.OWNER)
+  @ApiOperation({ summary: 'Tất cả đơn đặt sân thuộc các sân của chủ sân hiện tại' })
+  @ApiOkResponse({ description: 'Mảng đơn đặt sân kèm sân và thông tin khách, sắp xếp giờ bắt đầu giảm dần' })
+  findAllForOwner(@Req() req: AuthenticatedRequest) {
+    return this.bookingsService.findAllForOwner(req.user.id);
+  }
+
   @Get(':id')
   @Roles(Role.CUSTOMER)
   @ApiOperation({ summary: 'Chi tiết một đơn của chính mình' })
