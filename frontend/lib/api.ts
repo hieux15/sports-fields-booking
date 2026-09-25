@@ -2,6 +2,7 @@ import { mockBookings, mockCourts, mockUsers, courtDetail, ownerBookings } from 
 import type { BookingInput, BookingWithCourt, Court, CourtAvailability, CourtDetail, CourtInput, CourtQuery, OwnerBooking, Paginated, Review, User } from './types'
 import { normalizeApiError } from './api-error'
 import { clearSession, readToken } from './session'
+import { toast } from 'sonner'
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === '1'
 const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
 const currentUser = () => { if (typeof window === 'undefined') return mockUsers[0]; const raw = localStorage.getItem('sfb_user'); return raw ? JSON.parse(raw) as User : mockUsers[0] }
@@ -15,9 +16,10 @@ function parseBody(text: string): unknown {
   }
 }
 
-/** Token hết hạn: xóa phiên và đưa người dùng về trang đăng nhập. */
+/** Token hết hạn: hiển thị thông báo, xóa phiên và đưa người dùng về trang đăng nhập. */
 function handleUnauthorized(path: string, hadToken: boolean, status: number) {
   if (status !== 401 || !hadToken || path.startsWith('/auth/')) return
+  toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
   clearSession()
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
     window.location.assign('/login')

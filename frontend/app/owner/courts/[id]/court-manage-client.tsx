@@ -26,6 +26,14 @@ import { useAuth } from '@/components/auth-provider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 
@@ -37,6 +45,10 @@ export default function CourtManageClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null)
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const [upcomingOnly, setUpcomingOnly] = useState(false)
+  const [confirming, setConfirming] = useState<{
+    booking: OwnerBooking
+    action: 'confirm' | 'cancel'
+  } | null>(null)
 
   const load = useCallback(() => {
     if (!user || user.role !== 'OWNER') return
@@ -60,7 +72,7 @@ export default function CourtManageClient({ id }: { id: string }) {
       ? bookings.filter(item => new Date(item.endTime) > new Date())
       : bookings
     return [...list].sort(
-      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
     )
   }, [bookings, upcomingOnly])
 
@@ -69,13 +81,12 @@ export default function CourtManageClient({ id }: { id: string }) {
       total: bookings.length,
       pending: bookings.filter(item => item.status === 'PENDING').length,
       confirmed: bookings.filter(item => item.status === 'CONFIRMED').length,
-      // COMPLETED = đơn đã qua giờ kết thúc: lịch sử làm nên doanh thu ghi nhận.
       completed: bookings.filter(item => item.status === 'COMPLETED').length,
       cancelled: bookings.filter(item => item.status === 'CANCELLED').length,
       expired: bookings.filter(item => item.status === 'EXPIRED').length,
       revenue: bookings.filter(isConfirmedBooking).reduce((sum, item) => sum + bookingTotal(item), 0),
     }),
-    [bookings]
+    [bookings],
   )
 
   const updateStatus = async (booking: OwnerBooking, action: 'confirm' | 'cancel') => {
@@ -85,8 +96,8 @@ export default function CourtManageClient({ id }: { id: string }) {
       current.map(item =>
         item.id === booking.id
           ? { ...item, status: action === 'confirm' ? ('CONFIRMED' as const) : ('CANCELLED' as const) }
-          : item
-      )
+          : item,
+      ),
     )
     try {
       if (action === 'confirm') {
@@ -104,8 +115,17 @@ export default function CourtManageClient({ id }: { id: string }) {
     }
   }
 
+  const requestAction = (booking: OwnerBooking, action: 'confirm' | 'cancel') => {
+    setConfirming({ booking, action })
+  }
 
-if (!authLoading && (!user || user.role !== 'OWNER')) {
+  const executeConfirmedAction = async () => {
+    if (!confirming) return
+    await updateStatus(confirming.booking, confirming.action)
+    setConfirming(null)
+  }
+
+  if (!authLoading && (!user || user.role !== 'OWNER')) {
     return (
       <div className="mx-auto max-w-xl px-4 py-20 text-center sm:px-6">
         <Store className="mx-auto size-12 text-muted-foreground" />
@@ -261,14 +281,22 @@ if (!authLoading && (!user || user.role !== 'OWNER')) {
               key={booking.id}
               booking={booking}
               pendingAction={pendingAction}
-              onAction={updateStatus}
+              onAction={requestAction}
             />
           ))
         )}
       </div>
+
+      <ConfirmActionDialog
+        confirming={confirming}
+        submitting={Boolean(pendingAction)}
+        onClose={() => setConfirming(null)}
+        onConfirm={executeConfirmedAction}
+      />
     </section>
   )
 }
+
 function BookingRow({
   booking,
   pendingAction,
@@ -335,5 +363,49 @@ function BookingRow({
         )}
       </div>
     </div>
+  )
+}
+
+function ConfirmActionDialog({
+  confirming,
+  submitting,
+  onClose,
+  onConfirm,
+}: {
+  confirming: { booking: OwnerBooking; action: 'confirm' | 'cancel' } | null
+  submitting: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  if (!confirming) return null
+  const { booking, action } = confirming
+  const isConfirm = action === 'confirm'
+  return (
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{isConfirm ? 'Xác nhận đơn đặt sân?' : 'Hủy đơn đặt sân?'}</DialogTitle>
+          <DialogDescription>
+            {isConfirm
+              ? `Đơn tại ${booking.court.name} lúc ${formatTimeRange(
+                  booking.startTime,
+                  booking.endTime,
+                )} ngày ${formatDate(booking.startTime)} sẽ được xác nhận.`
+              : `Đơn tại ${booking.court.name} lúc ${formatTimeRange(
+                  booking.startTime,
+                  booking.endTime,
+                )} ngày ${formatDate(booking.startTime)} sẽ bị hủy. Hành động này không thể hoàn tác.`}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Đóng
+          </Button>
+          <Button variant={isConfirm ? 'default' : 'destructive'} onClick={onConfirm} disabled={submitting}>
+            {submitting ? 'Đang xử lý...' : isConfirm ? 'Xác nhận' : 'Xác nhận hủy'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
