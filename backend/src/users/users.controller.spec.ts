@@ -49,7 +49,7 @@ describe('UsersController', () => {
   it('ủy quyền đăng ký chủ sân cho service với id người dùng', async () => {
     const dto = {
       name: 'Green Field 03',
-      type: 'Bóng đá',
+      type: 'FOOTBALL' as const,
       address: '12 Lê Lợi, Hà Nội',
       pricePerHour: 150000,
       openTime: '06:00',

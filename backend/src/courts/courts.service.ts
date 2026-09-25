@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Paginated, toPaginated } from '../common/paginated';
 import { validateCourtPrice, validateCourtSchedule } from './court-validation';
 import { StorageService } from '../storage/storage.service';
+import { toCourtTypeKey } from './court-type';
 
 const COURT_ORDER_BY: Record<
   CourtSort,
@@ -38,9 +39,14 @@ function buildCourtWhere(query: QueryCourtsDto): Prisma.CourtWhereInput {
     ];
   }
 
-  const type = query.type?.trim();
-  if (type) {
-    where.type = { equals: type, mode: 'insensitive' };
+  // Enum đã được DTO kiểm tra (IsEnum) — so sánh đúng-một-giá-trị, không cần
+  // so khớp không phân biệt hoa thường/bỏ dấu như khi còn là text tự do.
+  // Ngoài ra chốt lại key để `where.type` luôn nhận literal hợp lệ, không phụ
+  // thuộc kiểu enum sinh từ Prisma client (tránh "unsafe assignment of an
+  // error typed value" khi client chưa generate).
+  const type = toCourtTypeKey(query.type);
+  if (type !== undefined) {
+    where.type = type;
   }
 
   const pricePerHour: { gte?: number; lte?: number } = {};
@@ -67,10 +73,17 @@ export class CourtsService {
   create(dto: CreateCourtDto, userId: string) {
     validateCourtSchedule(dto.openTime, dto.closeTime);
     validateCourtPrice(dto.pricePerHour);
+    // DTO đã kiểm tra IsEnum; chốt lại key để `data.type` luôn nhận literal hợp
+    // lệ, không phụ thuộc kiểu enum sinh từ Prisma client (tránh "unsafe
+    // assignment of an error typed value" khi client chưa generate).
+    const type = toCourtTypeKey(dto.type);
+    if (type === undefined) {
+      throw new BadRequestException('Loại sân không hợp lệ');
+    }
     return this.prisma.court.create({
       data: {
         name: dto.name,
-        type: dto.type,
+        type,
         address: dto.address,
         // Ảnh do chủ sân upload trước qua POST /courts/images (có thể bỏ trống).
         imageUrl: dto.imageUrl,

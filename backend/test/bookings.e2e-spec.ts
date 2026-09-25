@@ -81,7 +81,7 @@ describe('Bookings overlap invariants (e2e)', () => {
     ownerId = owner.id;
 
     const courtData = {
-      type: 'Badminton',
+      type: 'BADMINTON' as const,
       address: 'Địa chỉ test e2e',
       pricePerHour: 150000,
       openTime: '06:00',

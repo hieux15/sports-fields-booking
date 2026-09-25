@@ -24,7 +24,9 @@ model User {
 model Court {
   id           String    @id @default(uuid())
   name         String
-  type         String
+  // Enum thay cho text tự do: filter `GET /courts?type=` là so sánh đúng-một-giá-trị
+  // ở database, client không cần normalise/bỏ dấu khi so sánh.
+  type         SportType
   address      String?
   // Ảnh thật do chủ sân tải lên (Supabase Storage hoặc backend/uploads). Null
   // nghĩa là client tự dùng ảnh minh hoạ theo loại sân.
@@ -62,6 +64,16 @@ model Booking {
 enum Role {
   OWNER
   CUSTOMER
+}
+
+// Loại sân — key ổn định để hiển thị tiếng Việt nằm ở client (court-type.ts).
+enum SportType {
+  FOOTBALL
+  BADMINTON
+  TENNIS
+  PICKLEBALL
+  BASKETBALL
+  OTHER
 }
 
 enum BookingStatus {

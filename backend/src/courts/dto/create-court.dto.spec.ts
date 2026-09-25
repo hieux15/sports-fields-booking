@@ -4,7 +4,7 @@ import { CreateCourtDto } from './create-court.dto';
 
 const validCourt = {
   name: 'Sân bóng đá Mini Cầu Giấy 1',
-  type: 'Bóng đá',
+  type: 'FOOTBALL',
   address: 'Cầu Giấy, Hà Nội',
   pricePerHour: 200000,
   openTime: '06:00',
@@ -64,5 +64,13 @@ describe('CreateCourtDto', () => {
     expect(errors.map((error) => error.property)).toEqual(
       expect.arrayContaining(['name', 'type']),
     );
+  });
+
+  it('từ chối type không thuộc enum SportType (kể cả nhãn tiếng Việt)', async () => {
+    for (const type of ['Bóng đá', 'bong da', 'BADMINTON ']) {
+      const errors = await validatePayload({ ...validCourt, type });
+
+      expect(errors.some((error) => error.property === 'type')).toBe(true);
+    }
   });
 });

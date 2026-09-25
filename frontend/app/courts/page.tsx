@@ -26,11 +26,6 @@ const TYPE_FILTERS: { key: TypeFilter; label: string }[] = [
   ...COURT_TYPE_OPTIONS.map(option => ({ key: option.key as TypeFilter, label: option.label })),
 ]
 
-/** Nhãn gửi lên `GET /courts?type=` — database lưu loại sân dạng chữ ("Bóng đá"). */
-const TYPE_LABEL = Object.fromEntries(
-  COURT_TYPE_OPTIONS.map(option => [option.key, option.label])
-) as Record<CourtTypeKey, string>
-
 const SORT_OPTIONS: { value: CourtSort; label: string }[] = [
   { value: 'name_asc', label: 'Tên A → Z' },
   { value: 'price_asc', label: 'Giá thấp → cao' },
@@ -75,7 +70,7 @@ export default function CourtsPage() {
     api
       .courts({
         q: search || undefined,
-        type: type === 'ALL' ? undefined : TYPE_LABEL[type],
+        type: type === 'ALL' ? undefined : type,
         page,
         limit: PAGE_SIZE,
         sort,

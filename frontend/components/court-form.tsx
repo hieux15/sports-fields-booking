@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Clock3, ImagePlus, MapPin, Pencil, Plus, Store, Trash2 } from 'lucide-react'
-import { COURT_TYPE_OPTIONS, courtTypeLabel } from '@/lib/court-type'
+import { COURT_TYPE_OPTIONS, type CourtTypeKey } from '@/lib/court-type'
 import { COURT_IMAGE_ACCEPT, validateCourtImageFile } from '@/lib/court-image'
 import { getErrorMessage } from '@/lib/api-error'
 import { api } from '@/lib/api'
@@ -25,7 +25,7 @@ const MAX_COURT_PRICE = 10000000
 
 const DEFAULT_VALUES: CourtInput = {
   name: '',
-  type: COURT_TYPE_OPTIONS[0].label,
+  type: COURT_TYPE_OPTIONS[0].key,
   address: '',
   pricePerHour: 100000,
   openTime: '06:00',
@@ -35,7 +35,7 @@ const DEFAULT_VALUES: CourtInput = {
 function toFormValues(court: Court): CourtInput {
   return {
     name: court.name,
-    type: courtTypeLabel(court.type),
+    type: court.type,
     address: court.address ?? '',
     imageUrl: court.imageUrl,
     pricePerHour: Number(court.pricePerHour),
@@ -107,10 +107,6 @@ export function CourtForm({
       setError('Vui lòng nhập tên sân')
       return
     }
-    if (!values.type) {
-      setError('Vui lòng chọn loại sân')
-      return
-    }
     if (
       !Number.isFinite(values.pricePerHour) ||
       values.pricePerHour < MIN_COURT_PRICE ||
@@ -171,18 +167,20 @@ export function CourtForm({
               <Label htmlFor="court-type">Loại sân</Label>
               <Select
                 items={COURT_TYPE_OPTIONS.map(option => ({
-                  value: option.label,
+                  value: option.key,
                   label: option.label,
                 }))}
                 value={values.type}
-                onValueChange={value => update('type', value ?? '')}
+                onValueChange={value => {
+                  if (value) update('type', value as CourtTypeKey)
+                }}
               >
                 <SelectTrigger id="court-type" className="h-11 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {COURT_TYPE_OPTIONS.map(option => (
-                    <SelectItem key={option.key} value={option.label}>
+                    <SelectItem key={option.key} value={option.key}>
                       {option.label}
                     </SelectItem>
                   ))}

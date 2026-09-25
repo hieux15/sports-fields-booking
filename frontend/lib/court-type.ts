@@ -77,47 +77,15 @@ export const COURT_TYPE_OPTIONS: { key: CourtTypeKey; label: string }[] = [
 ]
 
 /**
- * Quy đổi giá trị `type` trong database về nhóm chuẩn. Dữ liệu thật lưu chữ
- * thường ('bóng đá') còn form gửi chữ hoa ('Bóng đá'), nên phải bỏ dấu và hạ
- * chữ thường trước khi so sánh.
+ * Trả metadata theo key enum — `Court.type` là `SportType` trong database nên
+ * không còn phải normalise/bỏ dấu để so sánh như khi còn là text tự do.
  */
-export function normalizeType(type: string): CourtTypeKey {
-  const value = (type || '')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-
-  switch (value) {
-    case 'bong da':
-    case 'bong da mini':
-    case 'san bong':
-      return 'FOOTBALL'
-    case 'cau long':
-      return 'BADMINTON'
-    case 'tennis':
-      return 'TENNIS'
-    case 'pickleball':
-      return 'PICKLEBALL'
-    case 'bong ro':
-      return 'BASKETBALL'
-    default:
-      return 'OTHER'
-  }
-}
-
-export function courtTypeMeta(type: string): CourtTypeMeta {
-  const key = normalizeType(type)
-  return { key, ...META[key] }
-}
-
-export function courtTypeLabel(type: string): string {
-  return courtTypeMeta(type).label
+export function courtTypeMeta(type: CourtTypeKey): CourtTypeMeta {
+  return { key: type, ...META[type] }
 }
 
 /** Sân tối thiểu để chọn ảnh — đủ cho cả `Court` lẫn `CourtDetail`. */
-export type CourtImageSource = { type: string; imageUrl?: string | null }
+export type CourtImageSource = { type: CourtTypeKey; imageUrl?: string | null }
 
 /**
  * Ảnh hiển thị của sân: ưu tiên ảnh thật chủ sân tải lên (`Court.imageUrl`), chỉ

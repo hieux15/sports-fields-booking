@@ -59,7 +59,7 @@ describe('CourtsService', () => {
       service.create(
         {
           name: 'Sân A',
-          type: 'Bóng đá',
+          type: 'FOOTBALL',
           pricePerHour: 200000,
           openTime: '22:00',
           closeTime: '06:00',
@@ -75,7 +75,7 @@ describe('CourtsService', () => {
       service.create(
         {
           name: 'Sân A',
-          type: 'Bóng đá',
+          type: 'FOOTBALL',
           pricePerHour: 5000,
           openTime: '06:00',
           closeTime: '22:00',
@@ -184,7 +184,7 @@ describe('CourtsService', () => {
     await service.create(
       {
         name: 'Sân A',
-        type: 'Bóng đá',
+        type: 'FOOTBALL',
         imageUrl: '/uploads/courts/a1b2.png',
         pricePerHour: 200000,
         openTime: '06:00',
@@ -197,7 +197,7 @@ describe('CourtsService', () => {
       expect.objectContaining({
         data: {
           name: 'Sân A',
-          type: 'Bóng đá',
+          type: 'FOOTBALL',
           imageUrl: '/uploads/courts/a1b2.png',
           pricePerHour: 200000,
           openTime: '06:00',
@@ -278,7 +278,7 @@ describe('CourtsService', () => {
       await service.findAll(
         query({
           q: '  cầu giấy ',
-          type: 'Bóng đá',
+          type: 'FOOTBALL',
           minPrice: 100000,
           maxPrice: 300000,
         }),
@@ -291,11 +291,36 @@ describe('CourtsService', () => {
               { name: { contains: 'cầu giấy', mode: 'insensitive' } },
               { address: { contains: 'cầu giấy', mode: 'insensitive' } },
             ],
-            type: { equals: 'Bóng đá', mode: 'insensitive' },
+            type: 'FOOTBALL',
             pricePerHour: { gte: 100000, lte: 300000 },
           },
         }),
       );
+    });
+
+    it('loại bỏ toàn bộ logic normalise/bỏ dấu ở client: enum lọc đúng-một-giá-trị', async () => {
+      prisma.court.findMany.mockResolvedValue([]);
+      prisma.court.count.mockResolvedValue(0);
+
+      await service.findAll(query({ type: 'FOOTBALL' }));
+
+      // Không còn `contains`/`mode: 'insensitive'` cho type — so sánh đúng key enum.
+      expect(prisma.court.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { type: 'FOOTBALL' } }),
+      );
+    });
+
+    it('bỏ qua giá trị type không thuộc enum thay vì đẩy xuống database', async () => {
+      prisma.court.findMany.mockResolvedValue([]);
+      prisma.court.count.mockResolvedValue(0);
+
+      for (const type of ['Bóng đá', 'bong da', 'football', 'FOOTBALL ']) {
+        await service.findAll(query({ type: type as QueryCourtsDto['type'] }));
+
+        expect(prisma.court.findMany).toHaveBeenLastCalledWith(
+          expect.objectContaining({ where: {} }),
+        );
+      }
     });
 
     it('bỏ qua tham số rỗng và tính đúng skip/totalPages', async () => {
@@ -305,7 +330,6 @@ describe('CourtsService', () => {
       const result = await service.findAll(
         query({
           q: '   ',
-          type: '  ',
           page: 3,
           limit: 10,
           sort: 'price_desc',

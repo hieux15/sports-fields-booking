@@ -9,6 +9,8 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { COURT_TYPE_KEYS } from '../court-type';
+import type { CourtTypeKey } from '../court-type';
 
 export const COURT_SORT_OPTIONS = [
   'name_asc',
@@ -35,15 +37,13 @@ export class QueryCourtsDto {
   q?: string;
 
   @ApiPropertyOptional({
-    description:
-      'Lọc theo loại sân, khớp không phân biệt hoa thường với giá trị đã lưu',
-    example: 'Bóng đá',
-    maxLength: 50,
+    description: 'Lọc theo loại sân — đúng một giá trị enum SportType',
+    enum: COURT_TYPE_KEYS,
+    example: 'FOOTBALL',
   })
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  type?: string;
+  @IsIn(COURT_TYPE_KEYS)
+  type?: CourtTypeKey;
 
   @ApiPropertyOptional({
     description: 'Giá thuê tối thiểu (VND/giờ)',

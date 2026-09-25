@@ -61,14 +61,14 @@ function toQueryString(query: CourtQuery) {
  */
 function paginateCourts(query: CourtQuery): Paginated<Court> {
   const keyword = query.q?.trim().toLowerCase() ?? ''
-  const type = query.type?.trim().toLowerCase() ?? ''
+  const type = query.type
   const page = query.page ?? 1
   const limit = query.limit ?? 12
 
   const matched = mockCourts.filter(court => {
     const haystack = `${court.name} ${court.address ?? ''}`.toLowerCase()
     if (keyword && !haystack.includes(keyword)) return false
-    if (type && court.type.toLowerCase() !== type) return false
+    if (type && court.type !== type) return false
     const price = Number(court.pricePerHour)
     if (query.minPrice !== undefined && price < query.minPrice) return false
     if (query.maxPrice !== undefined && price > query.maxPrice) return false

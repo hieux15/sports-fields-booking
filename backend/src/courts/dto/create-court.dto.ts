@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -15,6 +16,8 @@ import {
   MAX_PRICE_PER_HOUR,
   MIN_PRICE_PER_HOUR,
 } from '../court-validation';
+import { COURT_TYPE_KEYS } from '../court-type';
+import type { CourtTypeKey } from '../court-type';
 
 export class CreateCourtDto {
   @ApiProperty({ example: 'Sân bóng đá Mini Cầu Giấy 1', maxLength: 255 })
@@ -24,14 +27,13 @@ export class CreateCourtDto {
   name!: string;
 
   @ApiProperty({
-    example: 'Bóng đá',
+    enum: COURT_TYPE_KEYS,
+    example: 'FOOTBALL',
     description:
-      'Loại sân: Bóng đá, Cầu lông, Tennis, Pickleball, Bóng rổ, Khác',
+      'Loại sân — một giá trị enum SportType: FOOTBALL, BADMINTON, TENNIS, PICKLEBALL, BASKETBALL, OTHER',
   })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(50)
-  type!: string;
+  @IsIn(COURT_TYPE_KEYS)
+  type!: CourtTypeKey;
 
   @ApiPropertyOptional({
     example: 'Cầu Giấy, Hà Nội',

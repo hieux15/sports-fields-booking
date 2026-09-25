@@ -110,7 +110,9 @@ Notes for API consumers:
 - `GET /courts` answers a paginated envelope
   (`{ items, total, page, limit, totalPages }`) instead of a bare array. All
   parameters are optional: `q` (matches name or address, case-insensitive),
-  `type`, `minPrice`, `maxPrice`, `page` (default `1`), `limit` (default `12`,
+  `type` (an `enum` value of `SportType`: `FOOTBALL`, `BADMINTON`, `TENNIS`,
+  `PICKLEBALL`, `BASKETBALL`, `OTHER` — matched exactly), `minPrice`, `maxPrice`,
+  `page` (default `1`), `limit` (default `12`,
   max `50`) and `sort` (`name_asc` | `name_desc` | `price_asc` | `price_desc`).
   Every sort order adds `id` as a tie-break so a row never jumps between pages,
   and unknown query parameters are rejected with `400`.

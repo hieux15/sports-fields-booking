@@ -114,7 +114,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
   const start = selectedSlot?.start ?? ''
   const end = selectedSlot?.end ?? ''
 
-  const meta = courtTypeMeta(court?.type ?? '')
+  const meta = courtTypeMeta(court?.type ?? 'OTHER')
   const total = useMemo(() => {
     if (!court || !selectedSlot) return 0
     const startIso = vietnamLocalIso(date, start)

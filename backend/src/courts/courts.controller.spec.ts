@@ -50,7 +50,7 @@ describe('CourtsController', () => {
   it('ủy quyền tạo sân cho service với id chủ sân', async () => {
     const dto: CreateCourtDto = {
       name: 'Sân A',
-      type: 'Bóng đá',
+      type: 'FOOTBALL',
       pricePerHour: 200000,
       openTime: '06:00',
       closeTime: '22:00',

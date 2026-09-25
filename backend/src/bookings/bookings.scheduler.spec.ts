@@ -65,11 +65,11 @@ describe('BookingsScheduler', () => {
 
     await scheduler.sweepBookingStatuses();
 
-    const usedNow = (
-      prisma.booking.updateMany.mock.calls[0][0] as {
-        where: { startTime: { lte: Date } };
-      }
-    ).where.startTime.lte;
+    // jest.Mock không giữ kiểu tham số — ép kiểu đúng cấu trúc service truyền xuống.
+    const calls = prisma.booking.updateMany.mock.calls as [
+      [{ where: { startTime: { lte: Date } } }],
+    ];
+    const usedNow = calls[0][0].where.startTime.lte;
     expect(usedNow.getTime()).toBeGreaterThanOrEqual(before);
     expect(usedNow.getTime()).toBeLessThanOrEqual(Date.now());
   });

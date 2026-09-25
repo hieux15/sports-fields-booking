@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsDateString, IsIn } from 'class-validator';
 
 export class CourtAvailabilityDto {
-  @ApiProperty({ example: '2026-10-01', description: 'Ngày tại múi giờ Việt Nam' })
+  @ApiProperty({
+    example: '2026-10-01',
+    description: 'Ngày tại múi giờ Việt Nam',
+  })
   @IsDateString({ strict: true })
   date!: string;
 

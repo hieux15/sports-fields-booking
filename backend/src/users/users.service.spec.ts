@@ -6,6 +6,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import type { BecomeOwnerDto } from './dto/become-owner.dto';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -24,7 +25,7 @@ describe('UsersService', () => {
 
   const courtInput = {
     name: 'Green Field 03',
-    type: 'Bóng đá',
+    type: 'FOOTBALL' as const,
     address: '12 Lê Lợi, Hà Nội',
     imageUrl: 'https://cdn.example.com/san-bong.png',
     pricePerHour: 150000,
@@ -140,6 +141,24 @@ describe('UsersService', () => {
     await expect(
       service.becomeOwner('user-1', { ...courtInput, pricePerHour: 5000 }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.court.create).not.toHaveBeenCalled();
+  });
+
+  it('chặn tạo sân khi loại sân không thuộc enum SportType', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      role: 'CUSTOMER',
+    });
+
+    await expect(
+      service.becomeOwner('user-1', {
+        ...courtInput,
+        type: 'Bóng đá' as BecomeOwnerDto['type'],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    // Chặn trước khi mở transaction: không đổi vai trò tài khoản.
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
     expect(prisma.court.create).not.toHaveBeenCalled();
   });
 

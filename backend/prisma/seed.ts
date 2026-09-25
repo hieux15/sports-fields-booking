@@ -88,7 +88,7 @@ async function main() {
   const courtData = [
     [
       'Sân bóng đá Mini Cầu Giấy 1',
-      'Bóng đá',
+      'FOOTBALL',
       'Cầu Giấy, Hà Nội',
       220000,
       '06:00',
@@ -98,7 +98,7 @@ async function main() {
     ],
     [
       'Sân bóng đá Mini Cầu Giấy 2',
-      'Bóng đá',
+      'FOOTBALL',
       'Cầu Giấy, Hà Nội',
       200000,
       '06:00',
@@ -108,7 +108,7 @@ async function main() {
     ],
     [
       'Sân cầu lông Smash Zone',
-      'Cầu lông',
+      'BADMINTON',
       'Thanh Xuân, Hà Nội',
       100000,
       '07:00',
@@ -118,7 +118,7 @@ async function main() {
     ],
     [
       'Sân cầu lông Hoàng Mai',
-      'Cầu lông',
+      'BADMINTON',
       'Hoàng Mai, Hà Nội',
       90000,
       '06:00',
@@ -128,7 +128,7 @@ async function main() {
     ],
     [
       'Tennis Lakeside',
-      'Tennis',
+      'TENNIS',
       'Tây Hồ, Hà Nội',
       280000,
       '06:00',
@@ -138,7 +138,7 @@ async function main() {
     ],
     [
       'Tennis Garden 1',
-      'Tennis',
+      'TENNIS',
       'Nam Từ Liêm, Hà Nội',
       250000,
       '07:00',
@@ -148,7 +148,7 @@ async function main() {
     ],
     [
       'Pickleball 360',
-      'Pickleball',
+      'PICKLEBALL',
       'Đống Đa, Hà Nội',
       180000,
       '06:00',
@@ -158,7 +158,7 @@ async function main() {
     ],
     [
       'Sân bóng rổ Hoàng Cầu',
-      'Bóng rổ',
+      'BASKETBALL',
       'Đống Đa, Hà Nội',
       160000,
       '06:00',
@@ -168,7 +168,7 @@ async function main() {
     ],
     [
       'Sân bóng đá Phú Đô',
-      'Bóng đá',
+      'FOOTBALL',
       'Nam Từ Liêm, Hà Nội',
       240000,
       '05:30',
@@ -178,7 +178,7 @@ async function main() {
     ],
     [
       'Sân đa năng Tây Hồ',
-      'Khác',
+      'OTHER',
       'Tây Hồ, Hà Nội',
       150000,
       '06:00',

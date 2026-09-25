@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,7 @@ import {
   validateCourtPrice,
   validateCourtSchedule,
 } from '../courts/court-validation';
+import { toCourtTypeKey } from '../courts/court-type';
 
 @Injectable()
 export class UsersService {
@@ -81,6 +83,12 @@ export class UsersService {
     // nếu không sẽ tạo được sân có openTime/closeTime hoặc giá không hợp lệ.
     validateCourtSchedule(dto.openTime, dto.closeTime);
     validateCourtPrice(dto.pricePerHour);
+    // Chốt lại key enum trước khi mở transaction: giá trị lạ bị chặn ngay, không
+    // đổi vai trò tài khoản xong mới phát hiện sân không tạo được.
+    const type = toCourtTypeKey(dto.type);
+    if (type === undefined) {
+      throw new BadRequestException('Loại sân không hợp lệ');
+    }
 
     return this.prisma.$transaction(async (tx) => {
       // Vẫn phải kiểm tra role bên trong transaction: hai request đồng thời có thể
@@ -108,7 +116,7 @@ export class UsersService {
       const court = await tx.court.create({
         data: {
           name: dto.name,
-          type: dto.type,
+          type,
           address: dto.address,
           imageUrl: dto.imageUrl,
           pricePerHour: dto.pricePerHour,
