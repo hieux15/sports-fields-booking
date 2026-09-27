@@ -62,6 +62,12 @@ authenticated ones.
 
 ### Environment variables (`backend/.env`)
 
+Only `DATABASE_URL`, `DIRECT_URL` and `JWT_SECRET` are required - the app refuses
+to start without them. Every other variable below is optional and has a default in
+`src/config/env.validation.ts`, so a deploy can leave that whole group out. That is
+also why `NODE_ENV` is not listed: our code never reads it, and the tooling
+(Express, Jest, Prisma, the hosting platform) sets it on its own.
+
 | Variable | Description |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string (pooled, used by the app) |
@@ -283,7 +289,7 @@ no per-environment host has to be added to the config.
 
 ## Demo accounts
 
-Seeded by `backend/prisma/seed.ts` (password `123456` for both):
+Seeded by `backend/prisma/seed.ts` (password `demo@2026` for both):
 
 | Role | Email |
 | --- | --- |

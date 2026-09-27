@@ -18,7 +18,7 @@ export function setupSwagger(app: INestApplication): OpenAPIObject {
         'API đặt sân thể thao (NestJS + Prisma + PostgreSQL).',
         '',
         'Cách thử nhanh: gọi `POST /auth/login` với tài khoản demo',
-        '`customer@test.com` hoặc `owner@test.com` (mật khẩu `123456`), sau đó bấm',
+        '`customer@test.com` hoặc `owner@test.com` (mật khẩu `demo@2026`), sau đó bấm',
         '**Authorize** và dán `access_token` để gọi các API cần đăng nhập.',
         '',
         'Chống trùng giờ được bảo vệ 2 lớp: service trả `409`, và PostgreSQL',
