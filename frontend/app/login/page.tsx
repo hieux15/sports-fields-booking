@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
 import { isMockMode } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
@@ -11,6 +11,7 @@ import { AuthBrandPanel } from '@/components/auth-brand-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const DEMO_ACCOUNTS = [
   { role: 'Khách đặt sân', email: 'customer@test.com' },
@@ -22,7 +23,6 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,10 +82,8 @@ export default function LoginPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Mật khẩu</Label>
-            <Input
+            <PasswordInput
               id="password"
-              className="h-11"
-              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Ít nhất 6 ký tự"
               value={password}
@@ -93,14 +91,6 @@ export default function LoginPage() {
               required
               minLength={6}
             />
-            <button
-              type="button"
-              className="self-end text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setShowPassword(value => !value)}
-            >
-              {showPassword ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
-              {showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-            </button>
           </div>
 
           {error && (
@@ -126,7 +116,7 @@ export default function LoginPage() {
         </p>
 
         {isMockMode() && <div className="border-t border-border/80 pt-4">
-          <p className="text-xs text-muted-foreground">Tài khoản demo — mật khẩu 123456</p>
+          <p className="text-xs text-muted-foreground">Tài khoản demo — mật khẩu demo@2026</p>
           <div className="mt-2 flex flex-col gap-1">
             {DEMO_ACCOUNTS.map(account => (
               <button
@@ -135,7 +125,7 @@ export default function LoginPage() {
                 className="rounded-md px-1 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted/80"
                 onClick={() => {
                   setEmail(account.email)
-                  setPassword('123456')
+                  setPassword('demo@2026')
                 }}
               >
                 <span className="font-medium">{account.role}</span>

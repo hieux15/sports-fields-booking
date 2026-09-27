@@ -52,37 +52,40 @@ export function OwnerCourtCard({
   }
 
   return (
-    <Card className="shadow-none">
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted text-white">
-            <CourtImage
-              court={court}
-              sizes="48px"
-              className="absolute inset-0 size-full object-cover"
-            />
-            <div className={`absolute inset-0 ${meta.overlay}`} />
-            <Icon className="relative size-6" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate font-semibold">{court.name}</h3>
-              <Badge variant="secondary">{meta.label}</Badge>
-              {pendingCount > 0 && <Badge variant="destructive">{pendingCount} đơn chờ</Badge>}
-            </div>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <MapPin className="size-3.5" />
-              {court.address || 'Chưa cập nhật địa chỉ'}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
-              <span className="flex items-center gap-1.5 text-muted-foreground">
-                <Clock3 className="size-3.5" />
-                {court.openTime} – {court.closeTime}
-              </span>
-              <span className="font-semibold text-primary">
-                {formatVND(Number(court.pricePerHour))}/giờ
-              </span>
-            </div>
+    <Card className="flex-row p-0 shadow-none">
+      <div className="relative aspect-4/3 w-32 shrink-0 overflow-hidden bg-muted text-white sm:w-44">
+        <CourtImage
+          court={court}
+          alt={court.name}
+          sizes="(min-width: 640px) 176px, 128px"
+          className="size-full object-cover"
+        />
+        <div className={`absolute inset-0 ${meta.overlay}`} />
+        <div className="absolute inset-0 bg-linear-to-t from-black/55 via-transparent to-black/20" />
+        <div className="absolute inset-x-2 top-3 flex flex-col items-start gap-1.5 sm:inset-x-3 sm:top-3">
+          <Badge className="bg-background/90 text-xs text-foreground hover:bg-background/90">{meta.label}</Badge>
+          {pendingCount > 0 && <Badge variant="destructive">{pendingCount} đơn chờ</Badge>}
+        </div>
+        <div className="absolute bottom-3 left-3 flex size-8 items-center justify-center rounded-lg bg-black/30 backdrop-blur-sm sm:bottom-4 sm:left-4 sm:size-9">
+          <Icon className="size-4 sm:size-5" />
+        </div>
+      </div>
+
+      <CardContent className="flex min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-5">
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-semibold">{court.name}</h3>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="size-3.5 shrink-0" />
+            <span className="truncate">{court.address || 'Chưa cập nhật địa chỉ'}</span>
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
+              <Clock3 className="size-3.5" />
+              {court.openTime} – {court.closeTime}
+            </span>
+            <span className="font-semibold text-primary">
+              {formatVND(Number(court.pricePerHour))}/giờ
+            </span>
           </div>
         </div>
 

@@ -253,7 +253,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
           className="hero-photo absolute inset-0 size-full object-cover"
         />
         <div className={`absolute inset-0 ${meta.overlay}`} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/25" />
 
         <div className="relative mx-auto flex min-h-[min(48vh,420px)] max-w-7xl flex-col justify-end px-4 pb-8 pt-16 sm:px-6 sm:pb-10">
           <Link
@@ -273,7 +273,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
-          <div className="flex flex-col gap-8">
+          <div className="order-2 flex flex-col gap-8 lg:order-1">
             {/* Inline meta: price · hours · type */}
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:text-base">
               <span className="font-bold text-accent-foreground">
@@ -322,10 +322,93 @@ export default function CourtDetailClient({ id }: { id: string }) {
                 )}
               </div>
             </div>
+
+            {/* Keep reviews with the court details so they do not start below the tall booking card. */}
+            <section className="border-t border-border pt-6">
+              <h2 className="text-xl font-bold tracking-tight">Đánh giá sân</h2>
+              <div className="mt-4 flex flex-col gap-4">
+                {reviewsLoading ? (
+                  <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
+                ) : reviews.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Chưa có đánh giá nào cho sân này.</p>
+                ) : (
+                  reviews.map(review => (
+                    <div key={review.id} className="border-b border-border/80 pb-4 last:border-b-0">
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-foreground">{review.userName}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1 text-sm text-primary">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={`size-4 ${i < review.rating ? 'fill-current' : 'opacity-30'}`} />
+                        ))}
+                      </div>
+                      {review.comment && <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>}
+                    </div>
+                  ))
+                )}
+
+                {user && (
+                  <div className="mt-2">
+                    {editingReviewId ? (
+                      <form onSubmit={submitReview} className="flex flex-col gap-3">
+                        <p className="text-sm font-semibold">Chỉnh sửa đánh giá</p>
+                        <div className="flex items-center gap-2">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
+                              <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          className="min-h-20 rounded-md border border-border bg-background p-2 text-sm"
+                          placeholder="Nhận xét của bạn (tuỳ chọn)"
+                          value={reviewComment}
+                          onChange={e => setReviewComment(e.target.value)}
+                        />
+                        {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
+                        <div className="flex gap-2">
+                          <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang lưu...' : 'Lưu'}</Button>
+                          <Button type="button" variant="outline" onClick={() => { setEditingReviewId(null); setReviewComment(''); setReviewRating(5) }}>Hủy</Button>
+                        </div>
+                      </form>
+                    ) : myReviewId ? (
+                      <Button size="sm" onClick={() => {
+                        const review = reviews.find(item => item.id === myReviewId)
+                        if (review) {
+                          setEditingReviewId(myReviewId)
+                          setReviewRating(review.rating)
+                          setReviewComment(review.comment || '')
+                        }
+                      }}>Chỉnh sửa đánh giá</Button>
+                    ) : (
+                      <form onSubmit={submitReview} className="flex flex-col gap-3">
+                        <p className="text-sm font-semibold">Đánh giá sân của bạn</p>
+                        <div className="flex items-center gap-2">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
+                              <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          className="min-h-20 rounded-md border border-border bg-background p-2 text-sm"
+                          placeholder="Nhận xét của bạn (tuỳ chọn)"
+                          value={reviewComment}
+                          onChange={e => setReviewComment(e.target.value)}
+                        />
+                        {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
+                        <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}</Button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
 
           {/* Booking form — only interactive card surface */}
-          <Card className="border-border shadow-none ring-1 ring-foreground/5 lg:sticky lg:top-20">
+          <Card className="order-1 border-border shadow-none ring-1 ring-foreground/5 lg:sticky lg:top-20 lg:order-2">
             <CardHeader className="border-b border-border/80">
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarDays className="size-4 text-primary" /> Đặt sân
@@ -447,83 +530,6 @@ export default function CourtDetailClient({ id }: { id: string }) {
             </CardContent>
           </Card>
 
-          {/* Reviews section */}
-          <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold tracking-tight">Đánh giá sân</h2>
-            {reviewsLoading ? (
-              <p className="text-sm text-muted-foreground">Đang tải đánh giá...</p>
-            ) : reviews.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Chưa có đánh giá nào cho sân này.</p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {reviews.map(review => (
-                  <div key={review.id} className="border-b border-border/80 pb-4 last:border-b-0">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-foreground">{review.userName}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(review.createdAt).toLocaleDateString('vi-VN')}</p>
-                    </div>
-                    <div className="mt-1 flex items-center gap-1 text-sm text-primary">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`size-4 ${i < review.rating ? 'fill-current' : 'opacity-30'}`} />
-                      ))}
-                    </div>
-                    {review.comment && <p className="mt-2 text-sm text-muted-foreground">{review.comment}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {user && (
-              <div className="mt-2">
-                {editingReviewId ? (
-                  <form onSubmit={submitReview} className="flex flex-col gap-3">
-                    <p className="text-sm font-semibold">Chỉnh sửa đánh giá</p>
-                    <div className="flex items-center gap-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
-                          <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
-                        </button>
-                      ))}
-                    </div>
-                    <textarea
-                      className="min-h-[80px] rounded-md border border-border bg-background p-2 text-sm"
-                      placeholder="Nhận xét của bạn (tuỳ chọn)"
-                      value={reviewComment}
-                      onChange={e => setReviewComment(e.target.value)}
-                    />
-                    {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang lưu...' : 'Lưu'}</Button>
-                      <Button type="button" variant="outline" onClick={() => { setEditingReviewId(null); setReviewComment(''); setReviewRating(5); }}>Hủy</Button>
-                    </div>
-                  </form>
-                ) : myReviewId ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => { const r = reviews.find(x => x.id === myReviewId); if (r) { setEditingReviewId(myReviewId); setReviewRating(r.rating); setReviewComment(r.comment || '') } }}>Chỉnh sửa đánh giá</Button>
-                  </div>
-                ) : (
-                  <form onSubmit={submitReview} className="flex flex-col gap-3">
-                    <p className="text-sm font-semibold">Đánh giá sân của bạn</p>
-                    <div className="flex items-center gap-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <button key={i} type="button" onClick={() => setReviewRating(i + 1)}>
-                          <Star className={`size-5 ${i < reviewRating ? 'fill-current text-primary' : 'text-muted-foreground'}`} />
-                        </button>
-                      ))}
-                    </div>
-                    <textarea
-                      className="min-h-[80px] rounded-md border border-border bg-background p-2 text-sm"
-                      placeholder="Nhận xét của bạn (tuỳ chọn)"
-                      value={reviewComment}
-                      onChange={e => setReviewComment(e.target.value)}
-                    />
-                    {reviewError && <p className="text-sm text-destructive">{reviewError}</p>}
-                    <Button type="submit" disabled={reviewSubmitting}>{reviewSubmitting ? 'Đang gửi...' : 'Gửi đánh giá'}</Button>
-                  </form>
-                )}
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

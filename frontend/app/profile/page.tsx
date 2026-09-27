@@ -47,13 +47,14 @@ export default function ProfilePage() {
       setError('Vui lòng nhập họ và tên')
       return
     }
-    if (phone.trim().length > 20) {
-      setError('Số điện thoại phải ngắn hơn hoặc bằng 20 ký tự')
+    const normalizedPhone = phone.trim()
+    if (normalizedPhone && !/^\d{10,11}$/.test(normalizedPhone)) {
+      setError('Số điện thoại phải gồm 10 hoặc 11 chữ số')
       return
     }
     setSaving(true)
     try {
-      await api.updateMe({ name: name.trim(), phone: phone.trim() })
+      await api.updateMe({ name: name.trim(), phone: normalizedPhone })
       await refresh()
       toast.success('Đã cập nhật hồ sơ')
     } catch (e) {
@@ -162,7 +163,8 @@ export default function ProfilePage() {
                 id="profile-phone"
                 className="h-11"
                 inputMode="tel"
-                maxLength={20}
+                maxLength={11}
+                pattern="[0-9]{10,11}"
                 placeholder="0901234567"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}

@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { ArrowRight, Eye, EyeOff, Store } from 'lucide-react'
+import { ArrowRight, Store } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api-error'
 import { useAuth } from '@/components/auth-provider'
 import { AuthBrandPanel } from '@/components/auth-brand-panel'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export default function RegisterPage() {
   const { user, loading: authLoading, register } = useAuth()
@@ -18,8 +19,6 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,51 +98,29 @@ export default function RegisterPage() {
               required
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input
-                id="password"
-                className="h-11"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder="Tối thiểu 6 ký tự"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-              <button
-                type="button"
-                className="self-end text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setShowPassword(value => !value)}
-              >
-                {showPassword ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
-                {showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              </button>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirm">Nhập lại mật khẩu</Label>
-              <Input
-                id="confirm"
-                className="h-11"
-                type={showConfirm ? 'text' : 'password'}
-                autoComplete="new-password"
-                placeholder="Nhập lại mật khẩu"
-                value={confirm}
-                onChange={e => setConfirm(e.target.value)}
-                required
-                minLength={6}
-              />
-              <button
-                type="button"
-                className="self-end text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setShowConfirm(value => !value)}
-              >
-                {showConfirm ? <EyeOff className="mr-1 inline size-3.5" /> : <Eye className="mr-1 inline size-3.5" />}
-                {showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              </button>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password">Mật khẩu</Label>
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              placeholder="Tối thiểu 6 ký tự"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              minLength={6}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="confirm">Nhập lại mật khẩu</Label>
+            <PasswordInput
+              id="confirm"
+              autoComplete="new-password"
+              placeholder="Nhập lại mật khẩu"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              required
+              minLength={6}
+            />
           </div>
 
           {error && (
