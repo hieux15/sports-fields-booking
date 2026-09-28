@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
-import { bookingTotal, isActiveBooking, isConfirmedBooking, statusCount } from '@/lib/booking-utils'
+import { bookingTotal, isActiveBooking, isConfirmedBooking, sortOwnerBookings, statusCount } from '@/lib/booking-utils'
 import { formatDate, formatTimeRange, formatVND } from '@/lib/format'
 import type { Court, OwnerBooking } from '@/lib/types'
 import { useAuth } from '@/components/auth-provider'
@@ -64,9 +64,7 @@ export default function OwnerPage() {
 
   const pendingBookings = useMemo(
     () =>
-      bookings
-        .filter(item => item.status === 'PENDING')
-        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+      sortOwnerBookings(bookings.filter(item => item.status === 'PENDING')),
     [bookings]
   )
 

@@ -38,3 +38,30 @@ export function isCancellableBooking(booking: Pick<PricedBooking, 'startTime' | 
 export function statusCount(bookings: Pick<PricedBooking, 'status'>[], status: BookingStatus) {
   return bookings.filter(booking => booking.status === status).length
 }
+
+type SortableBooking = { startTime: string; status: BookingStatus; createdAt: string }
+
+/** Chủ sân xử lý đơn chờ gần nhất trước; lịch sắp tới tiếp theo, lịch sử ở cuối. */
+export function sortOwnerBookings<T extends SortableBooking>(bookings: T[], now = Date.now()) {
+  const priority = (booking: SortableBooking) => {
+    const isFuture = new Date(booking.startTime).getTime() > now
+    if (booking.status === 'PENDING' && isFuture) return 0
+    if (booking.status === 'CONFIRMED' && isFuture) return 1
+    if (booking.status === 'PENDING') return 2
+    if (booking.status === 'COMPLETED') return 3
+    if (booking.status === 'CANCELLED') return 4
+    return 5 // EXPIRED
+  }
+
+  return [...bookings].sort((a, b) => {
+    const priorityDifference = priority(a) - priority(b)
+    if (priorityDifference !== 0) return priorityDifference
+
+    const aStart = new Date(a.startTime).getTime()
+    const bStart = new Date(b.startTime).getTime()
+    const ascending = priority(a) <= 1 || (priority(a) === 2 && aStart > now)
+    const timeDifference = ascending ? aStart - bStart : bStart - aStart
+    if (timeDifference !== 0) return timeDifference
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+}

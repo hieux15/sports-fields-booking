@@ -87,7 +87,19 @@ export default function BookingsPage() {
         ...group,
         items: filtered
           .filter(item => bookingGroup(item.startTime) === group.key)
-          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
+          .sort((a, b) => {
+            const aStart = new Date(a.startTime).getTime()
+            const bStart = new Date(b.startTime).getTime()
+            if (group.key === 'past') return bStart - aStart
+
+            const statusPriority = (item: BookingWithCourt) => {
+              if (item.status === 'PENDING') return 0
+              if (item.status === 'CONFIRMED') return 1
+              return 2
+            }
+            const priorityDifference = statusPriority(a) - statusPriority(b)
+            return priorityDifference || aStart - bStart
+          }),
       })).filter(group => group.items.length > 0),
     [filtered]
   )

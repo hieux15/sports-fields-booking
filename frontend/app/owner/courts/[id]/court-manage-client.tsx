@@ -17,7 +17,7 @@ import {
 import { api } from '@/lib/api'
 import { getErrorMessage } from '@/lib/api-error'
 import { bookingStatusMeta } from '@/lib/booking-status'
-import { bookingTotal, isConfirmedBooking } from '@/lib/booking-utils'
+import { bookingTotal, isConfirmedBooking, sortOwnerBookings } from '@/lib/booking-utils'
 import { courtTypeMeta } from '@/lib/court-type'
 import { CourtImage } from '@/components/court-image'
 import { formatDate, formatTimeRange, formatVND, hoursBetween } from '@/lib/format'
@@ -71,9 +71,7 @@ export default function CourtManageClient({ id }: { id: string }) {
     const list = upcomingOnly
       ? bookings.filter(item => new Date(item.endTime) > new Date())
       : bookings
-    return [...list].sort(
-      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
-    )
+    return sortOwnerBookings(list)
   }, [bookings, upcomingOnly])
 
   const stats = useMemo(
