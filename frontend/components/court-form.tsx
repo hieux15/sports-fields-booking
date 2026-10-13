@@ -97,7 +97,7 @@ export function CourtForm({
     }
   }
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (uploadingImage) {
       setError('Vui lòng đợi ảnh tải lên xong trước khi lưu')
@@ -222,7 +222,7 @@ export function CourtForm({
               <ImagePlus className="size-4" /> Ảnh sân
             </Label>
             <div className="flex flex-wrap items-start gap-4">
-              <div className="relative aspect-[16/10] w-full max-w-64 overflow-hidden border border-border bg-muted">
+              <div className="relative aspect-16/10 w-full max-w-64 overflow-hidden border border-border bg-muted">
                 <CourtImage
                   court={{ type: values.type, imageUrl: values.imageUrl }}
                   alt="Ảnh sân"

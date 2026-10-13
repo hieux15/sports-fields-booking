@@ -34,7 +34,7 @@ export default function RegisterPage() {
     return returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null
   }
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
     if (password.length < 6) {

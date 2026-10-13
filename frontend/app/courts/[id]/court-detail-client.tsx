@@ -149,7 +149,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
     return durationMinutes / 60
   }, [durationMinutes])
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!court) return
     setFormError(null)
@@ -182,7 +182,7 @@ export default function CourtDetailClient({ id }: { id: string }) {
     }
   }
 
-  const submitReview = async (event: React.FormEvent) => {
+  const submitReview = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!court || !user) return
     setReviewError(null)

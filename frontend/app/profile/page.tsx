@@ -40,7 +40,7 @@ export default function ProfilePage() {
     setPhone(user.phone ?? '')
   }, [user])
 
-  const save = async (event: React.FormEvent) => {
+  const save = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
     if (!name.trim()) {

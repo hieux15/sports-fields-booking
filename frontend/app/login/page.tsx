@@ -37,7 +37,7 @@ export default function LoginPage() {
     if (!authLoading && user) router.replace(getReturnTo() ?? redirectTarget(user.role))
   }, [authLoading, router, user])
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault()
     setSubmitting(true)
     setError(null)
